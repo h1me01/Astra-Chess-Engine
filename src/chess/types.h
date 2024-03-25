@@ -133,11 +133,11 @@ namespace Chess {
     const int MAX_PLY = 256;
 
     // max number of possible legal moves in chess are 218
-    // if more than 128 moves are generated, then the engine is cooked
+    // if more than 128 moves are generated, then the engine is cooked 💀
     const int MAX_MOVES = 128;
 
     // max number of possible legal capture moves in chess are 74
-    // if more than 28 capture moves are generated, then the engine is cooked
+    // if more than 28 capture moves are generated, then the engine is cooked 💀
     const int MAX_CAPTURE_MOVES = 28;
 
     class Move {
