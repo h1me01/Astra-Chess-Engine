@@ -1,0 +1,497 @@
+/*
+   Astra is a chess engine written in C++
+   Copyright (C) 2024 Semih Özalp
+
+   This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+#include "search.h"
+
+namespace Astra {
+
+    /*
+     * Global Constants
+     */
+    const int MATE_SCORE = 32000;
+    const int DRAW_SCORE = 0;
+
+    const int RAZOR_MARGIN = 190; // used for razor pruning
+    const int FUTILITY_MARGIN = 127; // used for futility pruning
+
+    // used for delta pruning
+    const int deltaValues[] = {
+            180, // pawn
+            390, // knight
+            442, // bishop
+            718, // rook
+            1332, // queen
+            0 // king (can never be captured)
+    };
+
+    /*
+     * Search
+     */
+    Search::Search(Board board) : board(board), tt(16), searchedNodes(0), ply(0) {
+        clearData();
+    }
+
+    void Search::clearData() {
+        pvTable.reset();
+        moveOrdering.clear();
+    }
+
+    int Search::quiesceSearch(int alpha, int beta) {
+        // check if the search should be stopped
+        if(timeManager.isTimeExceeded()) {
+            return 0;
+        }
+
+        // increase the searched nodes
+        searchedNodes++;
+
+        int originalAlpha = alpha;
+        int standPat = board.inCheck() ? -MATE_SCORE + ply : eval(board);
+
+        /*
+         * Transposition Table Probing:
+         * - ttHit is true if an entry is found
+         * - If bound is exact, return entry score
+         * - If bound is lower, return beta
+         * - If bound is upper, return alpha
+         */
+        U64 hash = board.getHash();
+        TTEntry entry;
+        bool ttHit = tt.lookup(entry, hash, 0);
+
+        if (ttHit) {
+            if (entry.bound == EXACT_BOUND) {
+                return entry.score;
+            } else if (entry.bound == LOWER_BOUND && entry.score >= beta) {
+                return entry.score;
+            } else if (entry.bound == UPPER_BOUND && entry.score <= alpha) {
+                return entry.score;
+            }
+        }
+
+        // Alpha-Beta Pruning
+        if (standPat >= beta) {
+            return standPat;
+        }
+
+        if (standPat > alpha) {
+            alpha = standPat;
+        }
+
+        // generate all legal capture moves
+        Move moves[MAX_CAPTURE_MOVES];
+        int numMoves = board.genLegalMoves(moves, GEN_CAPTURE_MOVES);
+
+        // apply move ordering to sort the moves from best to worst
+        moveOrdering.sortMoves(board, tt, moves, numMoves, ply);
+
+        Move bestMove;
+        for (int i = 0; i < numMoves; ++i) {
+            Move move = moves[i];
+
+            // Static Exchange Evaluation (SEE)
+            if (seeCapture(board, move) < 0) {
+                continue;
+            }
+
+            // Delta Pruning
+            Piece capturedPiece = board.getPiece(move.to());
+            if (standPat + deltaValues[getPieceType(capturedPiece)] <= alpha) {
+                break;
+            }
+
+            // make move and increase ply
+            board.makeMove(move);
+            ply++;
+
+            int score = -quiesceSearch(-beta, -alpha);
+
+            // undo move and decrease ply
+            board.undoMove();
+            ply--;
+
+            // update best score and best move
+            if (score > alpha) {
+                alpha = score;
+                bestMove = move;
+            }
+
+            // store Transposition Entry as exact or upper bound
+            if (score >= beta) {
+                tt.store(hash, bestMove, score, ply, LOWER_BOUND);
+                return beta;
+            }
+        }
+
+        /*
+         * Transposition Table Storage (if best move is found):
+         * If alpha has not changed, the search stores the current position as an upper bound.
+         * If alpha has changed, the search stores the current position as an exact bound.
+         */
+        if (bestMove != NULL_MOVE) {
+            if (alpha > originalAlpha) {
+                tt.store(hash, bestMove, alpha, 0, EXACT_BOUND);
+            } else {
+                tt.store(hash, bestMove, alpha, 0, UPPER_BOUND);
+            }
+        }
+
+        // return the best score
+        return alpha;
+    }
+
+    int Search::negamax(int alpha, int beta, int depth, bool doNull) {
+        // check if the search should be stopped
+        if(timeManager.isTimeExceeded()) {
+            return 0;
+        }
+
+        const bool inCheck = board.inCheck();
+
+        int originalAlpha = alpha;
+        bool pvNode = (beta - alpha) != 1;
+        int staticEval = eval(board);
+        int bestScore = -MATE_SCORE;
+
+        // set local pv length to 0
+        pvTable(ply).length = 0;
+
+        if (depth <= 0) {
+            // increase the searched nodes
+            searchedNodes++;
+
+            // do a quiescence search
+            return quiesceSearch(alpha, beta);
+        }
+
+        /*
+         * Transposition Table Probing:
+         * - ttHit is true if an entry is found
+         * - If bound is exact, return entry score
+         * - If bound is lower, return beta
+         * - If bound is upper, return alpha
+         */
+        U64 hash = board.getHash();
+        TTEntry entry;
+        bool ttHit = tt.lookup(entry, hash, depth);
+
+        if (ttHit) {
+            if (entry.bound == EXACT_BOUND) {
+                return entry.score;
+            } else if (entry.bound == LOWER_BOUND && entry.score >= beta) {
+                return entry.score;
+            } else if (entry.bound == UPPER_BOUND && entry.score <= alpha) {
+                return entry.score;
+            }
+        }
+
+        /*
+         * Check Extension:
+         * increase depth by 1 if the board is in check
+         */
+        if (inCheck) {
+            // static eval has nothing to do with check extension
+            // simply set it to a really high value if board is in check
+            staticEval = -MATE_SCORE + ply;
+            depth++;
+        }
+
+        // apply pruning techniques if it is not a PV node and not in check
+        if (!pvNode && !inCheck) {
+            int score;
+
+            /*
+             * Null Move Pruning:
+             * - null move is allowed
+             * - depth is greater than or equal to 4
+             * - static eval is greater than or equal to the beta value
+             * - heavy pieces exist
+             */
+            U64 heavyPieces = board.getPieceBB(WHITE, QUEEN) | board.getPieceBB(WHITE, ROOK) |
+                              board.getPieceBB(BLACK, QUEEN) | board.getPieceBB(BLACK, ROOK);
+
+            if (doNull && depth >= 4 && staticEval >= beta && heavyPieces) {
+                const int R = depth > 6 ? 4 : 3;
+
+                board.makeNullMove();
+                score = negamax(-beta, 1 - beta, depth - R - 1, false);
+                board.undoNullMove();
+
+                if (score >= beta) {
+                    return beta;
+                }
+            }
+
+            /*
+             * Razoring
+             */
+            score = staticEval + RAZOR_MARGIN;
+            int newScore;
+
+            if (score < beta) {
+                if (depth == 1) {
+                    newScore = quiesceSearch(alpha, beta);
+                    return std::max(newScore, score);
+                }
+
+                score += RAZOR_MARGIN;
+
+                if (score < beta && depth <= 3) {
+                    newScore = quiesceSearch(alpha, beta);
+                    if (newScore < beta) {
+                        return std::max(newScore, score);
+                    }
+                }
+            }
+
+            // Internal Iterative Deepening
+            if (depth >= 4) {
+                depth--;
+            }
+
+            // Mate Distance Pruning
+
+            // check for beta cutoff from a theoretical mate position
+            int matingValue = MATE_SCORE - ply;
+            if (matingValue < beta) {
+                beta = matingValue;
+                if (alpha >= matingValue) {
+                    return matingValue; // Beta Cut-Off
+                }
+            }
+
+            // check for alpha cutoff from a theoretical mate position
+            matingValue = ply - MATE_SCORE;
+            if (matingValue > alpha) {
+                alpha = matingValue;
+                if (beta <= matingValue) {
+                    return matingValue; // Alpha Cut-Off
+                }
+            }
+        }
+
+        // generate all legal moves
+        Move moves[MAX_MOVES];
+        int numMoves = board.genLegalMoves(moves);
+
+        // apply move ordering to sort the moves from best to worst
+        moveOrdering.sortMoves(board, tt, moves, numMoves, ply);
+
+        Move bestMove;
+        for (int i = 0; i < numMoves; ++i) {
+            Move move = moves[i];
+
+            bool isCapture = move.isCapture();
+            bool isPromotion = move.isPromotion();
+
+            /*
+             * Futility Pruning:
+             * - node is not a PV node
+             * - current depth is less or equal to 4
+             * - not in check
+             * - move is not a capture move
+             * - move is not a promotion move
+             * - static eval plus futility margin is less than alpha
+             */
+            if (!pvNode && depth <= 4 && !isCapture && !isPromotion && !inCheck
+                && (staticEval + FUTILITY_MARGIN * depth) < alpha) {
+                continue;
+            }
+
+            // make move and increase ply
+            board.makeMove(move);
+            ply++;
+
+            int score;
+
+            // full-depth search for the first move
+            if (i == 0) {
+                score = -negamax(-beta, -alpha, depth - 1, true);
+            } else {
+                /*
+                 * Late Move Reduction (LMR):
+                 * - node is not a PV node
+                 * - move is not one of the first four moves
+                 * - current depth (ply) is greater than 3
+                 * - not in check after the move
+                 * - not in check before the move
+                 * - move is not a capture move
+                 * - move is not a promotion move
+                 */
+                if (!pvNode && i >= 4 && ply > 3 && !board.inCheck() && !inCheck && !isCapture && !isPromotion) {
+                    score = -negamax(-beta, -alpha, depth - 2, true);
+
+                    // if the score is greater than alpha, do a full-depth search
+                    if (score >= alpha) {
+                        score = -negamax(-beta, -alpha, depth - 1, true);
+                    }
+                } else {
+                    // Principal Variation Search (PVS)
+                    score = -negamax(-alpha - 1, -alpha, depth - 1, true);
+
+                    // if the score is greater than alpha, do a full-depth search
+                    if (score > alpha && score < beta) {
+                        score = -negamax(-beta, -alpha, depth - 1, true);
+                    }
+                }
+            }
+
+            // undo move and decrease ply
+            board.undoMove();
+            ply--;
+
+            // check if the search should be stopped
+            if(timeManager.isTimeExceeded()) {
+                return 0;
+            }
+
+            // update best score and best move
+            if (score > bestScore) {
+                bestScore = score;
+                bestMove = move;
+
+                // update alpha
+                if (bestScore > alpha) {
+                    alpha = bestScore;
+                }
+
+                // update Principal Variation table if it is a PV node
+                if (pvNode) {
+                    pvTable.updatePV(ply, move);
+                }
+            }
+
+            // Beta Cut-off
+            if (score >= beta) {
+                // store Transposition Entry as lower bound
+                int ttDepth = std::max(depth, 0);
+                tt.store(hash, bestMove, score, ttDepth, LOWER_BOUND);
+
+                // update History and Killer Moves (if not a capture)
+                if (!isCapture) {
+                    moveOrdering.updateHistory(board, move, depth * depth);
+                    moveOrdering.updateKiller(move, board.getTurn(), ply);
+                }
+
+                return score;
+            }
+        }
+
+        // check for mate and stalemate or draw
+        if (numMoves == 0) {
+            return board.inCheck() ? ply - MATE_SCORE : DRAW_SCORE;
+        } else if (board.isDraw()) {
+            return DRAW_SCORE;
+        }
+
+        // store Transposition Entry as exact or upper bound
+        int ttDepth = std::max(depth, 0);
+        if (alpha > originalAlpha) {
+            tt.store(hash, bestMove, bestScore, ttDepth, EXACT_BOUND);
+        } else {
+            tt.store(hash, bestMove, bestScore, ttDepth, UPPER_BOUND);
+        }
+
+        // return the best score
+        return bestScore;
+    }
+
+    // time per move in ms
+    Move Search::findBestMove(unsigned int timePerMove) {
+        clearData();
+
+        // set total time allowed for a game (in ms)
+        timeManager.setTimePerMove(timePerMove);
+
+        int score;
+
+        // initial window size
+        int aspWindow = 10;
+
+        // lower and upper bounds
+        int alpha = -MATE_SCORE;
+        int beta = MATE_SCORE;
+
+        // Iterative Deepening:
+        for (int depth = 1; depth <= MAX_DEPTH; ++depth) {
+            timeManager.start();
+
+            // reset the pv table
+            pvTable.reset();
+
+            // do not use aspiration window for the first few depths,
+            // since it will be fast for them anyway (don't use aspiration window for now)
+            if (depth < 6 || true) {
+                score = -negamax(-MATE_SCORE, MATE_SCORE, depth, true);
+            } else {
+                // Aspiration Window:
+                score = -negamax(alpha, beta, depth, true);
+
+                // do a full-window search if the score falls outside the window
+                if (score <= alpha || score >= beta) {
+                    alpha = -MATE_SCORE;
+                    beta = MATE_SCORE;
+                    depth--;
+                    continue;
+                }
+
+                // set the new window
+                alpha = score - aspWindow;
+                beta = score + aspWindow;
+
+                // widen the window for the next depth
+                aspWindow += aspWindow;
+            }
+
+            // check if the search should be stopped
+            if(timeManager.isTimeExceeded()) {
+                if(pvTable(0)(0) == NULL_MOVE) {
+                    std::cerr << "info string No move found" << std::endl;
+                    exit(1);
+                }
+
+                break;
+            }
+
+            // DEBUG: print info
+            std::cout << "info depth: " << depth
+                      << " pv: " << pvTable(0)(0)
+                      << " score: " << score
+                      << " nodes: " << searchedNodes << std::endl;
+
+            //printPv(depth);
+        }
+
+        std::cout << std::endl;
+        // return the best move
+        return pvTable(0)(0);
+    }
+
+    void Search::printPv(int depth) {
+        std::cout << "PV: ";
+
+        // print the PVLine at the given depth
+        for (int i = 0; i < depth; ++i) {
+            std::cout << pvTable(ply)(i) << " ";
+        }
+
+        std::cout << std::endl;
+    }
+
+
+} // namespace Astra
