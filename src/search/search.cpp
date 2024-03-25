@@ -28,16 +28,7 @@ namespace Astra {
 
     const int RAZOR_MARGIN = 190; // used for razor pruning
     const int FUTILITY_MARGIN = 127; // used for futility pruning
-
-    // used for delta pruning
-    const int deltaValues[] = {
-            180, // pawn
-            390, // knight
-            442, // bishop
-            718, // rook
-            1332, // queen
-            0 // king (can never be captured)
-    };
+    const int DELTA_MARGIN = 50; // used for delta pruning
 
     /*
      * Search
@@ -53,15 +44,20 @@ namespace Astra {
 
     int Search::quiesceSearch(int alpha, int beta) {
         // check if the search should be stopped
-        if(timeManager.isTimeExceeded()) {
+        if (timeManager.isTimeExceeded() && timePerMove != 0) {
             return 0;
         }
 
         // increase the searched nodes
         searchedNodes++;
 
+        /*
+         * Used Variables
+         */
+        const bool inCheck = board.inCheck();
+
         int originalAlpha = alpha;
-        int standPat = board.inCheck() ? -MATE_SCORE + ply : eval(board);
+        int standPat = eval(board);
 
         /*
          * Transposition Table Probing:
@@ -75,18 +71,18 @@ namespace Astra {
         bool ttHit = tt.lookup(entry, hash, 0);
 
         if (ttHit) {
-            if (entry.bound == EXACT_BOUND) {
+            if (entry.bound == PV_NODE) {
                 return entry.score;
-            } else if (entry.bound == LOWER_BOUND && entry.score >= beta) {
+            } else if (entry.bound == CUT_NODE && entry.score >= beta) {
                 return entry.score;
-            } else if (entry.bound == UPPER_BOUND && entry.score <= alpha) {
+            } else if (entry.bound == ALL_NODE && entry.score <= alpha) {
                 return entry.score;
             }
         }
 
         // Alpha-Beta Pruning
         if (standPat >= beta) {
-            return standPat;
+            return beta;
         }
 
         if (standPat > alpha) {
@@ -104,15 +100,28 @@ namespace Astra {
         for (int i = 0; i < numMoves; ++i) {
             Move move = moves[i];
 
+            // Delta Pruning
+            if(beta == originalAlpha + 1 && !inCheck) {
+                int deltaValue = standPat + DELTA_MARGIN;
+
+                if(move.flags() == EN_PASSANT) {
+                    deltaValue += PAWN_VALUE;
+                } else {
+                    deltaValue += pieceValues[getPieceType(board.getPiece(move.to()))];
+                }
+
+                if(move.isPromotion()) {
+                    deltaValue += QUEEN_VALUE - PAWN_VALUE;
+                }
+
+                if (deltaValue <= alpha) {
+                    continue;
+                }
+            }
+
             // Static Exchange Evaluation (SEE)
             if (seeCapture(board, move) < 0) {
                 continue;
-            }
-
-            // Delta Pruning
-            Piece capturedPiece = board.getPiece(move.to());
-            if (standPat + deltaValues[getPieceType(capturedPiece)] <= alpha) {
-                break;
             }
 
             // make move and increase ply
@@ -133,7 +142,7 @@ namespace Astra {
 
             // store Transposition Entry as exact or upper bound
             if (score >= beta) {
-                tt.store(hash, bestMove, score, ply, LOWER_BOUND);
+                tt.store(hash, bestMove, score, ply, CUT_NODE);
                 return beta;
             }
         }
@@ -145,9 +154,9 @@ namespace Astra {
          */
         if (bestMove != NULL_MOVE) {
             if (alpha > originalAlpha) {
-                tt.store(hash, bestMove, alpha, 0, EXACT_BOUND);
+                tt.store(hash, bestMove, alpha, 0, PV_NODE);
             } else {
-                tt.store(hash, bestMove, alpha, 0, UPPER_BOUND);
+                tt.store(hash, bestMove, alpha, 0, ALL_NODE);
             }
         }
 
@@ -157,20 +166,26 @@ namespace Astra {
 
     int Search::negamax(int alpha, int beta, int depth, bool doNull) {
         // check if the search should be stopped
-        if(timeManager.isTimeExceeded()) {
+        if (timeManager.isTimeExceeded() && timePerMove != 0) {
             return 0;
         }
 
+        /*
+         * Used Variables
+         */
         const bool inCheck = board.inCheck();
 
-        int originalAlpha = alpha;
         bool pvNode = (beta - alpha) != 1;
+
+        int originalAlpha = alpha;
         int staticEval = eval(board);
         int bestScore = -MATE_SCORE;
+        int extensions = 0;
 
         // set local pv length to 0
         pvTable(ply).length = 0;
 
+        // if we reached the maximum depth, do a quiescence search
         if (depth <= 0) {
             // increase the searched nodes
             searchedNodes++;
@@ -191,24 +206,13 @@ namespace Astra {
         bool ttHit = tt.lookup(entry, hash, depth);
 
         if (ttHit) {
-            if (entry.bound == EXACT_BOUND) {
+            if (entry.bound == PV_NODE) {
                 return entry.score;
-            } else if (entry.bound == LOWER_BOUND && entry.score >= beta) {
+            } else if (entry.bound == CUT_NODE && entry.score >= beta) {
                 return entry.score;
-            } else if (entry.bound == UPPER_BOUND && entry.score <= alpha) {
+            } else if (entry.bound == ALL_NODE && entry.score <= alpha) {
                 return entry.score;
             }
-        }
-
-        /*
-         * Check Extension:
-         * increase depth by 1 if the board is in check
-         */
-        if (inCheck) {
-            // static eval has nothing to do with check extension
-            // simply set it to a really high value if board is in check
-            staticEval = -MATE_SCORE + ply;
-            depth++;
         }
 
         // apply pruning techniques if it is not a PV node and not in check
@@ -220,12 +224,12 @@ namespace Astra {
              * - null move is allowed
              * - depth is greater than or equal to 4
              * - static eval is greater than or equal to the beta value
-             * - heavy pieces exist
+             * - heavy pieces of White and Black are present
              */
-            U64 heavyPieces = board.getPieceBB(WHITE, QUEEN) | board.getPieceBB(WHITE, ROOK) |
-                              board.getPieceBB(BLACK, QUEEN) | board.getPieceBB(BLACK, ROOK);
+            U64 heavyWhitePieces = board.getPieceBB(WHITE, QUEEN) | board.getPieceBB(WHITE, ROOK);
+            U64 heavyBlackPieces = board.getPieceBB(BLACK, QUEEN) | board.getPieceBB(BLACK, ROOK);
 
-            if (doNull && depth >= 4 && staticEval >= beta && heavyPieces) {
+            if (doNull && depth >= 4 && staticEval >= beta && heavyWhitePieces && heavyBlackPieces) {
                 const int R = depth > 6 ? 4 : 3;
 
                 board.makeNullMove();
@@ -317,11 +321,37 @@ namespace Astra {
             board.makeMove(move);
             ply++;
 
+            // is board in check after the move
+            bool inCheckAfterMove = board.inCheck();
+
+            /*
+             * Check Extension:
+             * increase depth by 1 if the board is in check
+             */
+            if (inCheckAfterMove) {
+                extensions = 1;
+            }
+
+            /*
+             * Passed Pawn Extension:
+             * if the move is a pawn move, and it is on the 2nd or 7th rank
+             */
+            PieceType movedPiece = getPieceType(board.getPiece(move.from()));
+            Rank movedToRank = getSquareRank(move.to());
+
+            if (movedPiece == PAWN && (movedToRank == RANK_2 || movedToRank == RANK_7)) {
+                extensions = 1;
+            }
+
+            // set new depth
+            int newDepth = depth - 1 + extensions;
+
+            // score of the current move
             int score;
 
             // full-depth search for the first move
             if (i == 0) {
-                score = -negamax(-beta, -alpha, depth - 1, true);
+                score = -negamax(-beta, -alpha, newDepth, true);
             } else {
                 /*
                  * Late Move Reduction (LMR):
@@ -332,8 +362,9 @@ namespace Astra {
                  * - not in check before the move
                  * - move is not a capture move
                  * - move is not a promotion move
+                 * - no extensions
                  */
-                if (!pvNode && i >= 4 && ply > 3 && !board.inCheck() && !inCheck && !isCapture && !isPromotion) {
+                if (!pvNode && i >= 4 && ply > 3 && !inCheckAfterMove && !inCheck && !isCapture && !isPromotion) {
                     score = -negamax(-beta, -alpha, depth - 2, true);
 
                     // if the score is greater than alpha, do a full-depth search
@@ -356,7 +387,7 @@ namespace Astra {
             ply--;
 
             // check if the search should be stopped
-            if(timeManager.isTimeExceeded()) {
+            if (timeManager.isTimeExceeded() && timePerMove != 0) {
                 return 0;
             }
 
@@ -380,7 +411,7 @@ namespace Astra {
             if (score >= beta) {
                 // store Transposition Entry as lower bound
                 int ttDepth = std::max(depth, 0);
-                tt.store(hash, bestMove, score, ttDepth, LOWER_BOUND);
+                tt.store(hash, bestMove, score, ttDepth, CUT_NODE);
 
                 // update History and Killer Moves (if not a capture)
                 if (!isCapture) {
@@ -402,9 +433,9 @@ namespace Astra {
         // store Transposition Entry as exact or upper bound
         int ttDepth = std::max(depth, 0);
         if (alpha > originalAlpha) {
-            tt.store(hash, bestMove, bestScore, ttDepth, EXACT_BOUND);
+            tt.store(hash, bestMove, bestScore, ttDepth, PV_NODE);
         } else {
-            tt.store(hash, bestMove, bestScore, ttDepth, UPPER_BOUND);
+            tt.store(hash, bestMove, bestScore, ttDepth, ALL_NODE);
         }
 
         // return the best score
@@ -414,6 +445,7 @@ namespace Astra {
     // time per move in ms
     Move Search::findBestMove(unsigned int timePerMove) {
         clearData();
+        this->timePerMove = timePerMove;
 
         // set total time allowed for a game (in ms)
         timeManager.setTimePerMove(timePerMove);
@@ -459,9 +491,9 @@ namespace Astra {
             }
 
             // check if the search should be stopped
-            if(timeManager.isTimeExceeded()) {
-                if(pvTable(0)(0) == NULL_MOVE) {
-                    std::cerr << "info string No move found" << std::endl;
+            if (timeManager.isTimeExceeded() && timePerMove != 0) {
+                if (pvTable(0)(0) == NULL_MOVE) {
+                    std::cerr << "info: No move found!" << std::endl;
                     exit(1);
                 }
 
@@ -474,6 +506,8 @@ namespace Astra {
                       << " score: " << score
                       << " nodes: " << searchedNodes << std::endl;
 
+            debugDepth = depth;
+            debugNodes += searchedNodes;
             //printPv(depth);
         }
 

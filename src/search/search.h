@@ -36,8 +36,13 @@ namespace Astra {
         // set search time per move to 1000ms
         Move findBestMove(unsigned int timePerMove = 1000);
 
+        int debugDepth = 0;
+        int debugNodes = 0;
+
     private:
         static const int MAX_DEPTH = 64;
+
+        int timePerMove;
 
         TimeManager timeManager;
         MoveOrdering moveOrdering;

@@ -27,6 +27,17 @@ using namespace Chess;
 
 namespace Astra {
 
+    // piece values
+    const int pieceValues[] = {
+            PAWN_VALUE,
+            KNIGHT_VALUE,
+            BISHOP_VALUE,
+            ROOK_VALUE,
+            QUEEN_VALUE,
+            KING_VALUE,
+            NO_PIECE_VALUE
+    };
+
     /*
      * Static Exchange Evaluation (SEE)
      */

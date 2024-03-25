@@ -52,7 +52,7 @@ namespace Chess {
 
     class Board {
     public:
-        StateInfo history[MAX_PLY];
+        StateInfo history[MAX_PLY * 2];
         // bitboard of enemy pieces that are currently attacking the king, updated in genLegalMoves()
         U64 checkers;
         // bitboard of pieces that are currently pinned to the king by enemy sliders, updated in genLegalMoves()

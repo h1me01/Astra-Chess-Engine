@@ -23,17 +23,6 @@ namespace Astra {
      * Static exchange evaluation (SEE)
      */
 
-    // piece values
-    const int pieceValues[] = {
-            PAWN_VALUE,
-            KNIGHT_VALUE,
-            BISHOP_VALUE,
-            ROOK_VALUE,
-            QUEEN_VALUE,
-            KING_VALUE,
-            NO_PIECE_VALUE
-    };
-
     U64 smallestAttacker(Board &board, Square s) {
         Color c = board.getTurn();
 
