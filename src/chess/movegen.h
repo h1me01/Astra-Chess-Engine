@@ -23,11 +23,6 @@
 
 namespace Chess {
 
-    enum GenType : int {
-        GEN_ALL_MOVES,
-        GEN_CAPTURE_MOVES
-    };
-
     // helper to generate quiet moves
     template<MoveFlags MF = QUIET>
     inline int make(Move *&moves, Square from, U64 to) {

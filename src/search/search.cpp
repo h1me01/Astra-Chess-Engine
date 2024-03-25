@@ -90,8 +90,15 @@ namespace Astra {
         }
 
         // generate all legal capture moves
-        Move moves[MAX_CAPTURE_MOVES];
-        int numMoves = board.genLegalMoves(moves, GEN_CAPTURE_MOVES);
+        Move moves[MAX_MOVES];
+        int numMoves = board.genLegalMoves(moves);
+
+        // check for mate and stalemate or draw
+        if (numMoves == 0) {
+            return board.inCheck() ? ply - MATE_SCORE : DRAW_SCORE;
+        } else if (board.isDraw()) {
+            return DRAW_SCORE;
+        }
 
         // apply move ordering to sort the moves from best to worst
         moveOrdering.sortMoves(board, tt, moves, numMoves, ply);
@@ -100,50 +107,52 @@ namespace Astra {
         for (int i = 0; i < numMoves; ++i) {
             Move move = moves[i];
 
-            // Delta Pruning
-            if(beta == originalAlpha + 1 && !inCheck) {
-                int deltaValue = standPat + DELTA_MARGIN;
+            if (move.isCapture()) {
+                // Delta Pruning
+                if (beta == originalAlpha + 1 && !inCheck) {
+                    int deltaValue = standPat + DELTA_MARGIN;
 
-                if(move.flags() == EN_PASSANT) {
-                    deltaValue += PAWN_VALUE;
-                } else {
-                    deltaValue += pieceValues[getPieceType(board.getPiece(move.to()))];
+                    if (move.flags() == EN_PASSANT) {
+                        deltaValue += PAWN_VALUE;
+                    } else {
+                        deltaValue += pieceValues[getPieceType(board.getPiece(move.to()))];
+                    }
+
+                    if (move.isPromotion()) {
+                        deltaValue += QUEEN_VALUE - PAWN_VALUE;
+                    }
+
+                    if (deltaValue <= alpha) {
+                        continue;
+                    }
                 }
 
-                if(move.isPromotion()) {
-                    deltaValue += QUEEN_VALUE - PAWN_VALUE;
-                }
-
-                if (deltaValue <= alpha) {
+                // Static Exchange Evaluation (SEE)
+                if (seeCapture(board, move) < 0) {
                     continue;
                 }
-            }
 
-            // Static Exchange Evaluation (SEE)
-            if (seeCapture(board, move) < 0) {
-                continue;
-            }
+                // make move and increase ply
+                board.makeMove(move);
+                ply++;
 
-            // make move and increase ply
-            board.makeMove(move);
-            ply++;
+                int score = -quiesceSearch(-beta, -alpha);
 
-            int score = -quiesceSearch(-beta, -alpha);
+                // undo move and decrease ply
+                board.undoMove();
+                ply--;
 
-            // undo move and decrease ply
-            board.undoMove();
-            ply--;
+                // update best score and best move
+                if (score > alpha) {
+                    alpha = score;
+                    bestMove = move;
+                }
 
-            // update best score and best move
-            if (score > alpha) {
-                alpha = score;
-                bestMove = move;
-            }
-
-            // store Transposition Entry as exact or upper bound
-            if (score >= beta) {
-                tt.store(hash, bestMove, score, ply, CUT_NODE);
-                return beta;
+                // store Transposition Entry as exact or upper bound
+                if (score >= beta) {
+                    tt.store(hash, bestMove, score, ply, CUT_NODE);
+                    return beta;
+                }
             }
         }
 
@@ -173,8 +182,6 @@ namespace Astra {
         /*
          * Used Variables
          */
-        const bool inCheck = board.inCheck();
-
         bool pvNode = (beta - alpha) != 1;
 
         int originalAlpha = alpha;
@@ -216,7 +223,7 @@ namespace Astra {
         }
 
         // apply pruning techniques if it is not a PV node and not in check
-        if (!pvNode && !inCheck) {
+        if (!pvNode && !board.inCheck()) {
             int score;
 
             /*
@@ -263,13 +270,16 @@ namespace Astra {
                 }
             }
 
-            // Internal Iterative Deepening
+            /*
+             * Internal Iterative Deepening
+             */
             if (depth >= 4) {
                 depth--;
             }
 
-            // Mate Distance Pruning
-
+            /*
+             * Mate Distance Pruning
+             */
             // check for beta cutoff from a theoretical mate position
             int matingValue = MATE_SCORE - ply;
             if (matingValue < beta) {
@@ -293,6 +303,13 @@ namespace Astra {
         Move moves[MAX_MOVES];
         int numMoves = board.genLegalMoves(moves);
 
+        // check for mate and stalemate or draw
+        if (numMoves == 0) {
+            return board.inCheck() ? ply - MATE_SCORE : DRAW_SCORE;
+        } else if (board.isDraw()) {
+            return DRAW_SCORE;
+        }
+
         // apply move ordering to sort the moves from best to worst
         moveOrdering.sortMoves(board, tt, moves, numMoves, ply);
 
@@ -300,6 +317,7 @@ namespace Astra {
         for (int i = 0; i < numMoves; ++i) {
             Move move = moves[i];
 
+            bool inCheck = board.inCheck();
             bool isCapture = move.isCapture();
             bool isPromotion = move.isPromotion();
 
@@ -312,29 +330,31 @@ namespace Astra {
              * - move is not a promotion move
              * - static eval plus futility margin is less than alpha
              */
-            if (!pvNode && depth <= 4 && !isCapture && !isPromotion && !inCheck
-                && (staticEval + FUTILITY_MARGIN * depth) < alpha) {
-                continue;
+            if (!pvNode && depth <= 4 && !isCapture && !isPromotion && !inCheck) {
+                if ((staticEval + FUTILITY_MARGIN * depth) < alpha) {
+                    continue;
+                }
             }
+
+            /*
+             * Extensions:
+             * - if board in check
+             * - if only one move is available
+             */
+            if (inCheck || numMoves == 1) {
+                extensions = 1;
+            }
+
+            // set new depth
+            int newDepth = depth - 1 + extensions;
 
             // make move and increase ply
             board.makeMove(move);
             ply++;
 
-            // is board in check after the move
-            bool inCheckAfterMove = board.inCheck();
-
-            /*
-             * Check Extension:
-             * increase depth by 1 if the board is in check
-             */
-            if (inCheckAfterMove) {
-                extensions = 1;
-            }
-
             /*
              * Passed Pawn Extension:
-             * if the move is a pawn move, and it is on the 2nd or 7th rank
+             * if move is a pawn move, and it is on the 2nd or 7th rank
              */
             PieceType movedPiece = getPieceType(board.getPiece(move.from()));
             Rank movedToRank = getSquareRank(move.to());
@@ -342,9 +362,6 @@ namespace Astra {
             if (movedPiece == PAWN && (movedToRank == RANK_2 || movedToRank == RANK_7)) {
                 extensions = 1;
             }
-
-            // set new depth
-            int newDepth = depth - 1 + extensions;
 
             // score of the current move
             int score;
@@ -364,7 +381,7 @@ namespace Astra {
                  * - move is not a promotion move
                  * - no extensions
                  */
-                if (!pvNode && i >= 4 && ply > 3 && !inCheckAfterMove && !inCheck && !isCapture && !isPromotion) {
+                if (!pvNode && i >= 4 && ply > 3 && !board.inCheck() && !inCheck && !isCapture && !isPromotion && extensions == 0) {
                     score = -negamax(-beta, -alpha, depth - 2, true);
 
                     // if the score is greater than alpha, do a full-depth search
@@ -373,11 +390,11 @@ namespace Astra {
                     }
                 } else {
                     // Principal Variation Search (PVS)
-                    score = -negamax(-alpha - 1, -alpha, depth - 1, true);
+                    score = -negamax(-alpha - 1, -alpha, newDepth, true);
 
                     // if the score is greater than alpha, do a full-depth search
                     if (score > alpha && score < beta) {
-                        score = -negamax(-beta, -alpha, depth - 1, true);
+                        score = -negamax(-beta, -alpha, newDepth, true);
                     }
                 }
             }
@@ -423,13 +440,6 @@ namespace Astra {
             }
         }
 
-        // check for mate and stalemate or draw
-        if (numMoves == 0) {
-            return board.inCheck() ? ply - MATE_SCORE : DRAW_SCORE;
-        } else if (board.isDraw()) {
-            return DRAW_SCORE;
-        }
-
         // store Transposition Entry as exact or upper bound
         int ttDepth = std::max(depth, 0);
         if (alpha > originalAlpha) {
@@ -450,15 +460,6 @@ namespace Astra {
         // set total time allowed for a game (in ms)
         timeManager.setTimePerMove(timePerMove);
 
-        int score;
-
-        // initial window size
-        int aspWindow = 10;
-
-        // lower and upper bounds
-        int alpha = -MATE_SCORE;
-        int beta = MATE_SCORE;
-
         // Iterative Deepening:
         for (int depth = 1; depth <= MAX_DEPTH; ++depth) {
             timeManager.start();
@@ -466,29 +467,8 @@ namespace Astra {
             // reset the pv table
             pvTable.reset();
 
-            // do not use aspiration window for the first few depths,
-            // since it will be fast for them anyway (don't use aspiration window for now)
-            if (depth < 6 || true) {
-                score = -negamax(-MATE_SCORE, MATE_SCORE, depth, true);
-            } else {
-                // Aspiration Window:
-                score = -negamax(alpha, beta, depth, true);
-
-                // do a full-window search if the score falls outside the window
-                if (score <= alpha || score >= beta) {
-                    alpha = -MATE_SCORE;
-                    beta = MATE_SCORE;
-                    depth--;
-                    continue;
-                }
-
-                // set the new window
-                alpha = score - aspWindow;
-                beta = score + aspWindow;
-
-                // widen the window for the next depth
-                aspWindow += aspWindow;
-            }
+            // do search
+            int score = -negamax(-MATE_SCORE, MATE_SCORE, depth, true);
 
             // check if the search should be stopped
             if (timeManager.isTimeExceeded() && timePerMove != 0) {

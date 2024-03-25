@@ -26,7 +26,7 @@ int main() {
 
     // test the performance of the move generation
     // and also the correctness of the move generation
-    //testPerft(5);
+    ///testPerft(5);
 
     std::string fen = "2rq1rk1/Qp1nbppp/p1b1p3/3pB3/4P3/P1NB3P/1PP2PP1/3R1RK1 w - - 1 19";
     std::string fen2 = "7R/4P1k1/8/6Bp/7P/6K1/5PP1/8 w - - 3 75";
@@ -36,11 +36,6 @@ int main() {
     int debugNodes = 0;
 
     Board board(fen3);
-
-    Astra::Search search(board);
-    Move bestMove = search.findBestMove();
-
-    return 0;
 
     while (true) {
         Astra::Search search(board);

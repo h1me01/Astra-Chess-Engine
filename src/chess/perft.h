@@ -114,7 +114,7 @@ namespace Chess {
                 // check if number of nodes are correct
                 if (nodes != testCase.results[depth - 1].second) {
                     std::cerr << "Test failed! Expected Nodes: " << testCase.results[depth - 1].second << std::endl;
-                    exit(0);
+                    exit(1);
                 } else {
                     std::chrono::duration<double, std::milli> diff = end - start;
                     std::cout << "Test passed | Depth: " << depth << " | Time: " << diff.count() << " ms\n";
