@@ -74,22 +74,27 @@ namespace Chess {
         return os;
     }
 
+    inline bool isCapture(Move& move) {
+        return move.flags() == CAPTURE || move.flags() == EN_PASSANT || (move.flags() >= PC_KNIGHT && move.flags() <= PC_QUEEN);
+    }
+
+    inline bool isPromotion(Move& move) {
+        return move.flags() >= PR_KNIGHT && move.flags() <= PC_QUEEN;
+    }
+
     // operator to get the opposite color
     constexpr Color operator~(Color c) {
         return Color(c ^ BLACK);
     }
 
-    // creates a new piece
     constexpr Piece makePiece(Color c, PieceType pt) {
         return Piece((c << 3) + pt);
     }
 
-    // gets the type of the piece
     constexpr PieceType getPieceType(Piece pc) {
         return PieceType(pc & 0b111);
     }
 
-    // gets the color of the piece
     constexpr Color getPieceColor(Piece pc) {
         return Color((pc & 0b1000) >> 3);
     }
@@ -119,12 +124,10 @@ namespace Chess {
         return s = s - d;
     }
 
-    // gets the rank of the square
     constexpr Rank getSquareRank(Square s) {
         return Rank(s >> 3);
     }
 
-    // gets the file of the square
     constexpr File getSquareFile(Square s) {
         return File(s & 0b111);
     }

@@ -19,6 +19,7 @@
 #include "chess/perft.h"
 #include "search/search.h"
 
+#include "eval/eval.h"
 
 int main() {
     initLookUpTables();
@@ -28,14 +29,19 @@ int main() {
     // and also the correctness of the move generation
     ///testPerft(5);
 
-    std::string fen = "2rq1rk1/Qp1nbppp/p1b1p3/3pB3/4P3/P1NB3P/1PP2PP1/3R1RK1 w - - 1 19";
-    std::string fen2 = "7R/4P1k1/8/6Bp/7P/6K1/5PP1/8 w - - 3 75";
-    std::string fen3 = "8/6p1/8/1K2p3/5p1p/8/8/1kq5 b - - 11 98";
+    std::string fen = "7R/4P1k1/8/6Bp/7P/6K1/5PP1/8 w - - 3 75";
+    std::string fen2 = "8/6p1/8/1K2p3/5p1p/8/8/1kq5 b - - 11 98";
+    std::string fen3 = "2r2rk1/1p4pp/p5p1/3p2q1/3Pn3/P1P2B2/1P3P2/R2Q1R1K b - - 5 26";
 
     int debugDepths = 0;
     int debugNodes = 0;
 
     Board board(fen3);
+
+    Astra::Search search(board);
+    Move bestMove = search.findBestMove();
+
+    return 0;
 
     while (true) {
         Astra::Search search(board);

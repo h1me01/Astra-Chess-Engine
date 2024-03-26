@@ -96,8 +96,8 @@ namespace Chess {
         b1 = ~(notPinned | board.getPieceBB(us, KNIGHT));
         while (b1) {
             Square s = popLsb(&b1);
-            // only include attacks that are aligned with our king
-            b2 = attacks(getPieceType(board.getPiece(s)), s, occ) & LINE[ourKing][s];
+            // only include getAttacks that are aligned with our king
+            b2 = getAttacks(getPieceType(board.getPiece(s)), s, occ) & LINE[ourKing][s];
 
             numMoves += make<CAPTURE>(moves, s, b2 & captureMask);
             numMoves += make<QUIET>(moves, s, b2 & quietMask);
@@ -140,7 +140,7 @@ namespace Chess {
         b1 = board.getPieceBB(us, KNIGHT) & notPinned;
         while (b1) {
             Square s = popLsb(&b1);
-            b2 = attacks(KNIGHT, s, occ);
+            b2 = getAttacks(KNIGHT, s, occ);
 
             numMoves += make<CAPTURE>(moves, s, b2 & captureMask);
             numMoves += make<QUIET>(moves, s, b2 & quietMask);
@@ -150,7 +150,7 @@ namespace Chess {
         b1 = board.getDiagSliders(us) & notPinned;
         while (b1) {
             Square s = popLsb(&b1);
-            b2 = attacks(BISHOP, s, occ);
+            b2 = getAttacks(BISHOP, s, occ);
 
             numMoves += make<CAPTURE>(moves, s, b2 & captureMask);
             numMoves += make<QUIET>(moves, s, b2 & quietMask);
@@ -160,7 +160,7 @@ namespace Chess {
         b1 = board.getOrthSliders(us) & notPinned;
         while (b1) {
             Square s = popLsb(&b1);
-            b2 = attacks(ROOK, s, occ);
+            b2 = getAttacks(ROOK, s, occ);
 
             numMoves += make<CAPTURE>(moves, s, b2 & captureMask);
             numMoves += make<QUIET>(moves, s, b2 & quietMask);
@@ -273,34 +273,34 @@ namespace Chess {
         // b is a multi-purpose bitboard
         U64 b;
 
-        // squares that our king cannot move to for each enemy piece, add occ of its attacks to the danger bitboard
+        // squares that our king cannot move to for each enemy piece, add occ of its getAttacks to the danger bitboard
         b = getPieceBB(them, PAWN);
-        U64 danger = attacks(KING, getKingSquare(them), occ);
+        U64 danger = getAttacks(KING, getKingSquare(them), occ);
         danger |= them == WHITE ? shift(NORTH_WEST, b) | shift(NORTH_EAST, b) :
                   shift(SOUTH_WEST, b) | shift(SOUTH_EAST, b);
 
         // bitboard for storing stuff
         b = getPieceBB(them, KNIGHT);
         while (b) {
-            danger |= attacks(KNIGHT, popLsb(&b), occ);
+            danger |= getAttacks(KNIGHT, popLsb(&b), occ);
         }
 
         // occ ^ SQUARE_BB[ourKing] is written to prevent the king from moving to squares
         // which are 'x-rayed' by enemy bishops and queens
         b = theirDiagSliders;
         while (b) {
-            danger |= attacks(BISHOP, popLsb(&b), occ ^ SQUARE_BB[ourKing]);
+            danger |= getAttacks(BISHOP, popLsb(&b), occ ^ SQUARE_BB[ourKing]);
         }
 
         // occ ^ SQUARE_BB[ourKing] is written to prevent the king from moving to squares
         // which are 'x-rayed' by enemy rooks and queens
         b = theirOrthSliders;
         while (b) {
-            danger |= attacks(ROOK, popLsb(&b), occ ^ SQUARE_BB[ourKing]);
+            danger |= getAttacks(ROOK, popLsb(&b), occ ^ SQUARE_BB[ourKing]);
         }
 
         // generate legal king moves
-        b = attacks(KING, ourKing, occ) & ~(ourOcc | danger);
+        b = getAttacks(KING, ourKing, occ) & ~(ourOcc | danger);
 
         numMoves += make<CAPTURE>(moves, ourKing, b & theirOcc);
         numMoves += make<QUIET>(moves, ourKing, b & ~theirOcc);
@@ -314,11 +314,11 @@ namespace Chess {
         U64 quietMask;
 
         // occ that check our king
-        checkers = attacks(KNIGHT, ourKing, occ) & getPieceBB(them, KNIGHT)
+        checkers = getAttacks(KNIGHT, ourKing, occ) & getPieceBB(them, KNIGHT)
                    | pawnAttacks(us, ourKing) & getPieceBB(them, PAWN);
         // potential checkers
-        U64 candidates = attacks(ROOK, ourKing, theirOcc) & theirOrthSliders
-                         | attacks(BISHOP, ourKing, theirOcc) & theirDiagSliders;
+        U64 candidates = getAttacks(ROOK, ourKing, theirOcc) & theirOrthSliders
+                         | getAttacks(BISHOP, ourKing, theirOcc) & theirDiagSliders;
 
         pinned = 0;
         while (candidates) {

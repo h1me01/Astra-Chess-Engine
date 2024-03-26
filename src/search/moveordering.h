@@ -20,7 +20,6 @@
 #define ASTRA_MOVEORDERING_H
 
 #include "../chess/board.h"
-#include "psqt.h"
 #include "tt.h"
 
 using namespace Chess;

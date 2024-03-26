@@ -62,7 +62,7 @@ namespace Chess {
     };
 
     const U64 PAWN_ATTACKS[NUM_COLORS][NUM_SQUARES] = {
-            { // white pawn attacks
+            { // white pawn getAttacks
                     0x200, 0x500, 0xa00, 0x1400,
                     0x2800, 0x5000, 0xa000, 0x4000,
                     0x20000, 0x50000, 0xa0000, 0x140000,
@@ -80,7 +80,7 @@ namespace Chess {
                     0x0, 0x0, 0x0, 0x0,
                     0x0, 0x0, 0x0, 0x0,
             },
-            { // black pawn attacks
+            { // black pawn getAttacks
                     0x0, 0x0, 0x0, 0x0,
                     0x0, 0x0, 0x0, 0x0,
                     0x2, 0x5, 0xa, 0x14,
@@ -110,7 +110,7 @@ namespace Chess {
     inline int BISHOP_ATTACK_SHIFTS[NUM_SQUARES];
     inline U64 BISHOP_ATTACKS[NUM_SQUARES][512];
 
-    // calculates sliding attacks from a given square, on a given axis
+    // calculates sliding getAttacks from a given square, on a given axis
     // this uses the Hyperbola Quintessence Algorithm
     inline U64 slidingAttacks(Square s, U64 occ, U64 mask) {
         U64 maskOcc = mask & occ;
@@ -131,8 +131,8 @@ namespace Chess {
 
     void initLookUpTables();
 
-    // attacks from a given square (doesn't include pawn attacks)
-    constexpr U64 attacks(PieceType pt, Square s, U64 occ) {
+    // attacks from a given square (doesn't include pawn getAttacks)
+    constexpr U64 getAttacks(PieceType pt, Square s, U64 occ) {
         switch (pt) {
             case ROOK:
                 return getRookAttacks(s, occ);
@@ -150,7 +150,7 @@ namespace Chess {
         return 0;
     }
 
-    // pawn attacks from a given square
+    // pawn getAttacks from a given square
     constexpr U64 pawnAttacks(Color c, Square s) {
         return PAWN_ATTACKS[c][s];
     }

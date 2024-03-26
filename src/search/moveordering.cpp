@@ -32,7 +32,7 @@ namespace Astra {
                 attackers = pawnAttacks(~c, s) & board.getPieceBB(c, PAWN);
             } else {
                 U64 pieces = board.getOccupancy(WHITE) | board.getOccupancy(BLACK);
-                attackers = attacks(pt, s, pieces) & board.getPieceBB(c, pt);
+                attackers = getAttacks(pt, s, pieces) & board.getPieceBB(c, pt);
             }
 
             if (attackers) {
@@ -96,7 +96,7 @@ namespace Astra {
 
     void MoveOrdering::updateHistory(Board &board, Move &move, int score) {
         // check if move is a capture, return error if it is
-        assert(!move.isCapture());
+        assert(!isCapture(move));
 
         Piece piece = board.getPiece(move.from());
         history[piece][move.from()][move.to()] += score;
@@ -109,7 +109,7 @@ namespace Astra {
 
     void MoveOrdering::updateKiller(Move &move, Color c, int ply) {
         // check if move is a capture, return error if it is
-        assert(!move.isCapture());
+        assert(!isCapture(move));
 
         if (!Move::isSame(move, killer1[c][ply])) {
             killer2[c][ply] = killer1[c][ply];
@@ -138,8 +138,7 @@ namespace Astra {
             Move move = moves[i];
             scores[i] = 0;
 
-            bool isCapture = move.isCapture();
-            bool isPromotion = move.isPromotion();
+            bool moveIsCapture = isCapture(move);
 
             Square from = move.from();
             Square to = move.to();
@@ -152,7 +151,7 @@ namespace Astra {
                 continue;
             }
 
-            if (isCapture) {
+            if (moveIsCapture) {
                 int seeScore = seeCapture(board, move);
                 int capturedPieceValue = move.flags() == EN_PASSANT ? PAWN_VALUE : pieceValues[capturePieceType];
                 int captureScore = capturedPieceValue * 32768 - pieceValues[movePieceType] - 16384 + seeScore;
@@ -161,17 +160,12 @@ namespace Astra {
                 continue;
             }
 
-            if (isPromotion) {
+            if (isPromotion(move)) {
                 scores[i] += typeOfPromotion(move.flags()) + PROMOTION_BONUS;
                 continue;
             }
 
             if (movePieceType != KING) {
-                int psqtMgScore = mg_pesto_table[movePieceType][to] - mg_pesto_table[movePieceType][from];
-                int psqtEgScore = eg_pesto_table[movePieceType][to] - eg_pesto_table[movePieceType][from];
-
-                scores[i] += (psqtMgScore + psqtEgScore) / 2;
-
                 U64 oppAttacks = board.getAttackers(~color, to, board.getOccupancy(WHITE) | board.getOccupancy(BLACK));
 
                 if (oppAttacks) {
@@ -179,7 +173,7 @@ namespace Astra {
                 }
             }
 
-            if (!isCapture) {
+            if (!moveIsCapture) {
                 if (move == killer1[color][ply]) {
                     scores[i] += KILLER1_BONUS;
                 } else if (move == killer2[color][ply]) {

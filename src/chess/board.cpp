@@ -76,6 +76,7 @@ namespace Chess {
 
                 std::cout << PIECE_STR[board[s]] << " ";
             }
+
             std::cout << std::endl;
         }
 
@@ -159,13 +160,13 @@ namespace Chess {
     U64 Board::getAttackers(Color c, Square s, U64 occ) const {
         return c == WHITE ?
                (pawnAttacks(BLACK, s) & pieceBB[WHITE_PAWN]) |
-               (attacks(KNIGHT,s, occ) & pieceBB[WHITE_KNIGHT]) |
-               (attacks(BISHOP, s, occ) & (pieceBB[WHITE_BISHOP] | pieceBB[WHITE_QUEEN])) |
-               (attacks(ROOK, s, occ) & (pieceBB[WHITE_ROOK] | pieceBB[WHITE_QUEEN])) :
+               (getAttacks(KNIGHT, s, occ) & pieceBB[WHITE_KNIGHT]) |
+               (getAttacks(BISHOP, s, occ) & (pieceBB[WHITE_BISHOP] | pieceBB[WHITE_QUEEN])) |
+               (getAttacks(ROOK, s, occ) & (pieceBB[WHITE_ROOK] | pieceBB[WHITE_QUEEN])) :
                (pawnAttacks(WHITE, s) & pieceBB[BLACK_PAWN]) |
-               (attacks(KNIGHT, s, occ) & pieceBB[BLACK_KNIGHT]) |
-               (attacks(BISHOP, s, occ) & (pieceBB[BLACK_BISHOP] | pieceBB[BLACK_QUEEN])) |
-               (attacks(ROOK, s, occ) & (pieceBB[BLACK_ROOK] | pieceBB[BLACK_QUEEN]));
+               (getAttacks(KNIGHT, s, occ) & pieceBB[BLACK_KNIGHT]) |
+               (getAttacks(BISHOP, s, occ) & (pieceBB[BLACK_BISHOP] | pieceBB[BLACK_QUEEN])) |
+               (getAttacks(ROOK, s, occ) & (pieceBB[BLACK_ROOK] | pieceBB[BLACK_QUEEN]));
     }
 
     bool Board::inCheck() const {
@@ -182,7 +183,7 @@ namespace Chess {
         history[gamePly].movedPiece = board[move.from()];
 
         MoveFlags mf = move.flags();
-        if(getPieceType(history[gamePly].movedPiece) == PAWN || move.isCapture()) {
+        if(getPieceType(history[gamePly].movedPiece) == PAWN || isCapture(move)) {
             history[gamePly].halfMoveClock = 0;
         } else {
             history[gamePly].halfMoveClock++;
@@ -191,39 +192,106 @@ namespace Chess {
         switch (mf) {
             case QUIET:
                 movePiece(move.from(), move.to());
+
+                // update moved piece
+                switch (getPieceType(getPiece(move.from()))) {
+                    case PAWN:
+                        evalInfo[gamePly].move_pawn(stm, move.from(), move.to());
+                        break;
+                    case KNIGHT:
+                        evalInfo[gamePly].move_knight(stm, move.from(), move.to());
+                        break;
+                    case BISHOP:
+                        evalInfo[gamePly].move_bishop(stm, move.from(), move.to());
+                        break;
+                    case ROOK:
+                        evalInfo[gamePly].move_rook(stm, move.from(), move.to());
+                        break;
+                    case QUEEN:
+                        evalInfo[gamePly].move_queen(stm, move.from(), move.to());
+                        break;
+                    case KING:
+                        evalInfo[gamePly].move_king(stm, move.from(), move.to());
+                        break;
+                }
+
                 break;
             case DOUBLE_PUSH:
                 movePiece(move.from(), move.to());
                 history[gamePly].epSquare = move.from() + relativeDir(stm, NORTH);
+
+                // update moved piece
+                evalInfo[gamePly].move_pawn(stm, move.from(), move.to());
                 break;
             case OO:
                 if (stm == WHITE) {
                     movePiece(e1, g1);
                     movePiece(h1, f1);
+
+                    // update moved piece
+                    evalInfo[gamePly].move_king(WHITE, e1, g1);
+                    evalInfo[gamePly].move_rook(WHITE, h1, f1);
                 } else {
                     movePiece(e8, g8);
                     movePiece(h8, f8);
+
+                    // update moved piece
+                    evalInfo[gamePly].move_king(BLACK, e8, g8);
+                    evalInfo[gamePly].move_rook(BLACK, h8, f8);
                 }
                 break;
             case OOO:
                 if (stm == WHITE) {
                     movePiece(e1, c1);
                     movePiece(a1, d1);
+
+                    // update moved piece
+                    evalInfo[gamePly].move_king(WHITE, e1, c1);
+                    evalInfo[gamePly].move_rook(WHITE, a1, d1);
                 } else {
                     movePiece(e8, c8);
                     movePiece(a8, d8);
+
+                    // update moved piece
+                    evalInfo[gamePly].move_king(BLACK, e8, c8);
+                    evalInfo[gamePly].move_rook(BLACK, a8, d8);
                 }
                 break;
             case EN_PASSANT:
                 movePiece(move.from(), move.to());
                 removePiece(move.to() + relativeDir(stm, SOUTH));
+
+                // update moved piece
+                evalInfo[gamePly].move_pawn(stm, move.from(), move.to());
+                // remove captured pawn
+                evalInfo[gamePly].remove_pawn(stm, move.to() + relativeDir(stm, SOUTH));
                 break;
             case PR_KNIGHT:
             case PR_BISHOP:
             case PR_ROOK:
             case PR_QUEEN:
                 removePiece(move.from());
-                putPiece(makePiece(stm, typeOfPromotion(move.flags())), move.to());;
+                putPiece(makePiece(stm, typeOfPromotion(move.flags())), move.to());
+
+                // remove promotion pawn
+                evalInfo[gamePly].remove_pawn(stm, move.from());
+
+                // add promoted piece
+                switch (move.flags()) {
+                    case PR_KNIGHT:
+                        evalInfo[gamePly].promote_pawn_to_knight(stm, move.from(), move.to());
+                        break;
+                    case PR_BISHOP:
+                        evalInfo[gamePly].promote_pawn_to_bishop(stm, move.from(), move.to());
+                        break;
+                    case PR_ROOK:
+                        evalInfo[gamePly].promote_pawn_to_rook(stm, move.from(), move.to());
+                        break;
+                    case PR_QUEEN:
+                        evalInfo[gamePly].promote_pawn_to_queen(stm, move.from(), move.to());
+                        break;
+                }
+
                 break;
             case PC_KNIGHT:
             case PC_BISHOP:
@@ -233,6 +301,45 @@ namespace Chess {
                 history[gamePly].capturedPiece = board[move.to()];
                 removePiece(move.to());
                 putPiece(makePiece(stm, typeOfPromotion(move.flags())), move.to());
+
+                // remove promotion pawn
+                evalInfo[gamePly].remove_pawn(stm, move.from());
+
+                // remove captured piece
+                switch (getPieceType(getPiece(move.to()))) {
+                    case PAWN:
+                        evalInfo[gamePly].remove_pawn(stm, move.to());
+                        break;
+                    case KNIGHT:
+                        evalInfo[gamePly].remove_knight(stm, move.to());
+                        break;
+                    case BISHOP:
+                        evalInfo[gamePly].remove_bishop(stm, move.to());
+                        break;
+                    case ROOK:
+                        evalInfo[gamePly].remove_rook(stm, move.to());
+                        break;
+                    case QUEEN:
+                        evalInfo[gamePly].remove_queen(stm,  move.to());
+                        break;
+                }
+
+                // add promoted piece
+                switch (move.flags()) {
+                    case PC_KNIGHT:
+                        evalInfo[gamePly].promote_pawn_to_knight(stm, move.from(), move.to());
+                        break;
+                    case PC_BISHOP:
+                        evalInfo[gamePly].promote_pawn_to_bishop(stm, move.from(), move.to());
+                        break;
+                    case PC_ROOK:
+                        evalInfo[gamePly].promote_pawn_to_rook(stm, move.from(), move.to());
+                        break;
+                    case PC_QUEEN:
+                        evalInfo[gamePly].promote_pawn_to_queen(stm, move.from(), move.to());
+                        break;
+                }
+
                 break;
             case CAPTURE:
                 history[gamePly].capturedPiece = board[move.to()];
@@ -245,6 +352,48 @@ namespace Chess {
                 pieceBB[board[to]] &= ~mask;
                 board[to] = board[from];
                 board[from] = NO_PIECE;
+
+                // remove captured piece
+                switch (getPieceType(getPiece(move.to()))) {
+                    case PAWN:
+                        evalInfo[gamePly].remove_pawn(stm, move.to());
+                        break;
+                    case KNIGHT:
+                        evalInfo[gamePly].remove_knight(stm, move.to());
+                        break;
+                    case BISHOP:
+                        evalInfo[gamePly].remove_bishop(stm, move.to());
+                        break;
+                    case ROOK:
+                        evalInfo[gamePly].remove_rook(stm, move.to());
+                        break;
+                    case QUEEN:
+                        evalInfo[gamePly].remove_queen(stm,  move.to());
+                        break;
+                }
+
+                // update moved piece
+                switch (getPieceType(getPiece(move.from()))) {
+                    case PAWN:
+                        evalInfo[gamePly].move_pawn(stm, move.from(), move.to());
+                        break;
+                    case KNIGHT:
+                        evalInfo[gamePly].move_knight(stm, move.from(), move.to());
+                        break;
+                    case BISHOP:
+                        evalInfo[gamePly].move_bishop(stm, move.from(), move.to());
+                        break;
+                    case ROOK:
+                        evalInfo[gamePly].move_rook(stm, move.from(), move.to());
+                        break;
+                    case QUEEN:
+                        evalInfo[gamePly].move_queen(stm, move.from(), move.to());
+                        break;
+                    case KING:
+                        evalInfo[gamePly].move_king(stm, move.from(), move.to());
+                        break;
+                }
+
                 break;
         }
 
@@ -329,6 +478,7 @@ namespace Chess {
                 }
             }
         }
+
         return false;
     }
 
@@ -358,9 +508,17 @@ namespace Chess {
 
     // removes a piece from the board and updates the hash and pieces bitboards
     void Board::removePiece(Square s) {
+        Piece pc = board[s];
+
         hash ^= zobrist::zobristTable[board[s]][s];
         pieceBB[board[s]] &= ~SQUARE_BB[s];
         board[s] = NO_PIECE;
+
+        if(getPieceType(pc) == BISHOP) {
+            if(popCount(pieceBB[pc]) == 1) {
+                evalInfo[gamePly].remove_bishop_pair_bonus(stm);
+            }
+        }
     }
 
     // moves a piece on the board and updates the hash and pieces bitboards

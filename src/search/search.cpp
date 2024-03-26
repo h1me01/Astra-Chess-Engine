@@ -17,6 +17,7 @@
 */
 
 #include "search.h"
+#include "../eval/eval.h"
 
 namespace Astra {
 
@@ -57,7 +58,7 @@ namespace Astra {
         const bool inCheck = board.inCheck();
 
         int originalAlpha = alpha;
-        int standPat = eval(board);
+        int standPat = Eval::eval(board);
 
         /*
          * Transposition Table Probing:
@@ -107,52 +108,56 @@ namespace Astra {
         for (int i = 0; i < numMoves; ++i) {
             Move move = moves[i];
 
-            if (move.isCapture()) {
-                // Delta Pruning
-                if (beta == originalAlpha + 1 && !inCheck) {
-                    int deltaValue = standPat + DELTA_MARGIN;
+            // skip the move if it is not a capture
+            if(!isCapture(move)) {
+                continue;
+            }
 
-                    if (move.flags() == EN_PASSANT) {
-                        deltaValue += PAWN_VALUE;
-                    } else {
-                        deltaValue += pieceValues[getPieceType(board.getPiece(move.to()))];
-                    }
+            // Delta Pruning
+            if (beta == originalAlpha + 1 && !inCheck) {
+                int deltaValue = standPat + DELTA_MARGIN;
 
-                    if (move.isPromotion()) {
-                        deltaValue += QUEEN_VALUE - PAWN_VALUE;
-                    }
-
-                    if (deltaValue <= alpha) {
-                        continue;
-                    }
+                if (move.flags() == EN_PASSANT) {
+                    deltaValue += PAWN_VALUE;
+                } else {
+                    Piece piece = board.getPiece(move.to());
+                    deltaValue += pieceValues[getPieceType(piece)];
                 }
 
-                // Static Exchange Evaluation (SEE)
-                if (seeCapture(board, move) < 0) {
+                if (isPromotion(move)) {
+                    deltaValue += QUEEN_VALUE - PAWN_VALUE;
+                }
+
+                if (deltaValue <= alpha) {
                     continue;
                 }
+            }
 
-                // make move and increase ply
-                board.makeMove(move);
-                ply++;
+            // Static Exchange Evaluation (SEE)
+            if (seeCapture(board, move) < 0) {
+                continue;
+            }
 
-                int score = -quiesceSearch(-beta, -alpha);
+            // make move and increase ply
+            board.makeMove(move);
+            ply++;
 
-                // undo move and decrease ply
-                board.undoMove();
-                ply--;
+            int score = -quiesceSearch(-beta, -alpha);
 
-                // update best score and best move
-                if (score > alpha) {
-                    alpha = score;
-                    bestMove = move;
-                }
+            // undo move and decrease ply
+            board.undoMove();
+            ply--;
 
-                // store Transposition Entry as exact or upper bound
-                if (score >= beta) {
-                    tt.store(hash, bestMove, score, ply, CUT_NODE);
-                    return beta;
-                }
+            // update best score and best move
+            if (score > alpha) {
+                alpha = score;
+                bestMove = move;
+            }
+
+            // store Transposition Entry as exact or upper bound
+            if (score >= beta) {
+                tt.store(hash, bestMove, score, ply, CUT_NODE);
+                return beta;
             }
         }
 
@@ -182,17 +187,19 @@ namespace Astra {
         /*
          * Used Variables
          */
+        const bool inCheck = board.inCheck();
+
         bool pvNode = (beta - alpha) != 1;
 
         int originalAlpha = alpha;
-        int staticEval = eval(board);
+        int staticEval =  Eval::eval(board);
         int bestScore = -MATE_SCORE;
         int extensions = 0;
 
         // set local pv length to 0
         pvTable(ply).length = 0;
 
-        // if we reached the maximum depth, do a quiescence search
+        // if we reached the maximum depth, do quiescence search
         if (depth <= 0) {
             // increase the searched nodes
             searchedNodes++;
@@ -222,8 +229,16 @@ namespace Astra {
             }
         }
 
+        /*
+         * Check Extension:
+         * if in check, extend the search by 1 ply
+         */
+        if(inCheck) {
+            extensions = 1;
+        }
+
         // apply pruning techniques if it is not a PV node and not in check
-        if (!pvNode && !board.inCheck()) {
+        if (!pvNode && !inCheck) {
             int score;
 
             /*
@@ -303,13 +318,6 @@ namespace Astra {
         Move moves[MAX_MOVES];
         int numMoves = board.genLegalMoves(moves);
 
-        // check for mate and stalemate or draw
-        if (numMoves == 0) {
-            return board.inCheck() ? ply - MATE_SCORE : DRAW_SCORE;
-        } else if (board.isDraw()) {
-            return DRAW_SCORE;
-        }
-
         // apply move ordering to sort the moves from best to worst
         moveOrdering.sortMoves(board, tt, moves, numMoves, ply);
 
@@ -317,9 +325,8 @@ namespace Astra {
         for (int i = 0; i < numMoves; ++i) {
             Move move = moves[i];
 
-            bool inCheck = board.inCheck();
-            bool isCapture = move.isCapture();
-            bool isPromotion = move.isPromotion();
+            bool moveIsCapture = isCapture(move);
+            bool moveIsPromotion = isPromotion(move);
 
             /*
              * Futility Pruning:
@@ -330,27 +337,11 @@ namespace Astra {
              * - move is not a promotion move
              * - static eval plus futility margin is less than alpha
              */
-            if (!pvNode && depth <= 4 && !isCapture && !isPromotion && !inCheck) {
+            if (!pvNode && depth <= 4 && !moveIsCapture && !moveIsPromotion && !inCheck) {
                 if ((staticEval + FUTILITY_MARGIN * depth) < alpha) {
                     continue;
                 }
             }
-
-            /*
-             * Extensions:
-             * - if board in check
-             * - if only one move is available
-             */
-            if (inCheck || numMoves == 1) {
-                extensions = 1;
-            }
-
-            // set new depth
-            int newDepth = depth - 1 + extensions;
-
-            // make move and increase ply
-            board.makeMove(move);
-            ply++;
 
             /*
              * Passed Pawn Extension:
@@ -362,6 +353,13 @@ namespace Astra {
             if (movedPiece == PAWN && (movedToRank == RANK_2 || movedToRank == RANK_7)) {
                 extensions = 1;
             }
+
+            // make move and increase ply
+            board.makeMove(move);
+            ply++;
+
+            // set new depth
+            int newDepth = depth - 1 + extensions;
 
             // score of the current move
             int score;
@@ -381,7 +379,7 @@ namespace Astra {
                  * - move is not a promotion move
                  * - no extensions
                  */
-                if (!pvNode && i >= 4 && ply > 3 && !board.inCheck() && !inCheck && !isCapture && !isPromotion && extensions == 0) {
+                if (!pvNode && i >= 4 && ply > 3 && !board.inCheck() && !inCheck && !moveIsCapture && !moveIsPromotion && extensions == 0) {
                     score = -negamax(-beta, -alpha, depth - 2, true);
 
                     // if the score is greater than alpha, do a full-depth search
@@ -431,13 +429,20 @@ namespace Astra {
                 tt.store(hash, bestMove, score, ttDepth, CUT_NODE);
 
                 // update History and Killer Moves (if not a capture)
-                if (!isCapture) {
+                if (!moveIsCapture) {
                     moveOrdering.updateHistory(board, move, depth * depth);
                     moveOrdering.updateKiller(move, board.getTurn(), ply);
                 }
 
                 return score;
             }
+        }
+
+        // check for mate and stalemate or draw
+        if (numMoves == 0) {
+            return board.inCheck() ? ply - MATE_SCORE : DRAW_SCORE;
+        } else if (board.isDraw()) {
+            return DRAW_SCORE;
         }
 
         // store Transposition Entry as exact or upper bound

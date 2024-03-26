@@ -22,6 +22,7 @@
 #include "zobrist.h"
 #include "attacks.h"
 #include "movegen.h"
+#include "../Eval/psqt.h"
 
 namespace Chess {
 
@@ -52,6 +53,8 @@ namespace Chess {
 
     class Board {
     public:
+        Eval::PstEvalInfo evalInfo[MAX_PLY * 2];
+
         StateInfo history[MAX_PLY * 2];
         // bitboard of enemy pieces that are currently attacking the king, updated in genLegalMoves()
         U64 checkers;

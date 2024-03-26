@@ -20,7 +20,6 @@
 #define ASTRA_SEARCH_H
 
 #include <algorithm>
-#include "evaluate.h"
 #include "pvtable.h"
 #include "moveordering.h"
 #include "timemanager.h"
@@ -58,6 +57,7 @@ namespace Astra {
         void clearData();
 
         int quiesceSearch(int alpha, int beta);
+
         int negamax(int alpha, int beta, int depth, bool doNull);
 
     };

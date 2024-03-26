@@ -62,7 +62,7 @@ namespace Chess {
         initRookAttacks();
         initBishopAttacks();
 
-        // initialize pseudo legal attacks
+        // initialize pseudo legal getAttacks
         memcpy(PSEUDO_LEGAL_ATTACKS[KNIGHT], KNIGHT_ATTACKS, sizeof(KNIGHT_ATTACKS));
         memcpy(PSEUDO_LEGAL_ATTACKS[KING], KING_ATTACKS, sizeof(KING_ATTACKS));
 

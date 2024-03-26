@@ -136,10 +136,6 @@ namespace Chess {
     // if more than 128 moves are generated, then the engine is cooked 💀
     const int MAX_MOVES = 128;
 
-    // max number of possible legal capture moves in chess are 74
-    // if more than 28 capture moves are generated, then the engine is cooked 💀
-    const int MAX_CAPTURE_MOVES = 28;
-
     class Move {
     public:
         // default null move (a1a1)
@@ -177,16 +173,6 @@ namespace Chess {
         int to_from() const { return move & 0xffff; }
 
         MoveFlags flags() const { return MoveFlags(move >> 12); }
-
-        bool isCapture() const {
-            auto flag = flags();
-            return flag == CAPTURE || flag == EN_PASSANT || (flag >= PC_KNIGHT && flag <= PC_QUEEN);
-        }
-
-        bool isPromotion() const {
-            auto flag = flags();
-            return flag >= PR_KNIGHT && flag <= PC_QUEEN;
-        }
 
         void operator=(Move m) { move = m.move; }
         bool operator==(Move m) const { return to_from() == m.to_from(); }
