@@ -99,16 +99,14 @@ namespace Astra {
     }
 
     void MoveOrdering::clear() {
-        for (int i = 0; i < KILLER_SIZE; ++i) {
+        for (int i = 0; i < MAX_PLY; ++i) {
             killer1[i] = NULL_MOVE;
             killer2[i] = NULL_MOVE;
         }
 
         for (auto &i: history) {
             for (auto &j: i) {
-                for (int &k: j) {
-                    k = 0;
-                }
+                for (int &k: j) { k = 0; }
             }
         }
     }
@@ -117,13 +115,11 @@ namespace Astra {
         // check if move is a capture, return error if it is
         assert(!isCapture(move));
 
-        Piece piece = board.getPiece(move.from());
-        history[piece][move.from()][move.to()] += score;
+        history[board.sideToMove()][move.from()][move.to()] += score;
     }
 
     int MoveOrdering::getHistoryScore(Board &board, Move &move) {
-        Piece piece = board.getPiece(move.from());
-        return history[typeOfPiece(piece)][move.from()][move.to()];
+        return history[board.sideToMove()][move.from()][move.to()];
     }
 
     void MoveOrdering::updateKiller(Move &move, int ply) {

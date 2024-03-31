@@ -190,6 +190,11 @@ namespace Chess {
         return isAttacked(~stm, kingSq, pieces);
     }
 
+    bool Board::nonPawnMaterial(Color c) const {
+        return pieceBB[makePiece(c, KNIGHT)] | pieceBB[makePiece(c, BISHOP)] |
+               pieceBB[makePiece(c, ROOK)] | pieceBB[makePiece(c, QUEEN)];
+    }
+
     void Board::unmakeMove() {
         stm = ~stm;
 

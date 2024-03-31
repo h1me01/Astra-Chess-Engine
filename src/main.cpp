@@ -28,11 +28,16 @@ int main() {
     // and also the correctness of the move generation
     //testPerft(5);
 
-    Board board(DEFAULT_FEN);
+    Board board("rnbqkbnr/pp1ppppp/2p5/8/2P5/8/PP1PPPPP/RNBQKBNR w KQkq - 0 2");
+
+    Astra::Search search(board);
+    search.findBestMove(0);
+
+    return 0;
 
     while (true) {
         Astra::Search search(board);
-        Move bestMove = search.findBestMove(0);
+        Move bestMove = search.findBestMove();
 
         board.makeMove<true>(bestMove);
         board.pgn();

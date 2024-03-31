@@ -20,7 +20,6 @@
 #define ASTRA_MOVEORDERING_H
 
 #include "../chess/board.h"
-#include "tt.h"
 
 using namespace Chess;
 
@@ -66,28 +65,23 @@ namespace Astra {
         void updateKiller(Move &move, int ply);
 
         template<SearchType searchType>
-        void sortMoves(Board &board, TTable &tt, Move *moves, int numMoves, int ply);
+        void sortMoves(Board &board, Move *moves, int numMoves, Move& ttMove, int ply);
 
     private:
-        static const int KILLER_SIZE = 32;
+        Move killer1[MAX_PLY];
+        Move killer2[MAX_PLY];
 
-        Move killer1[KILLER_SIZE];
-        Move killer2[KILLER_SIZE];
-
-        int history[NUM_PIECES][NUM_SQUARES][NUM_SQUARES]{};
+        int history[NUM_COLORS][NUM_SQUARES][NUM_SQUARES]{};
     };
 
     template<SearchType searchType>
-    inline void MoveOrdering::sortMoves(Board &board, TTable &tt, Move *moves, int numMoves, int ply) {
-        TTEntry entry;
-        bool ttHit = tt.lookup(entry, board.getHash(), 0);
-
+    inline void MoveOrdering::sortMoves(Board &board, Move *moves, int numMoves, Move& ttMove, int ply) {
         int scores[numMoves];
         for (int i = 0; i < numMoves; ++i) {
             Move move = moves[i];
             scores[i] = 0;
 
-            if (ttHit && move == entry.move) {
+            if (ttMove != NULL_MOVE && move == ttMove) {
                 scores[i] = TT_SCORE;
                 continue;
             }

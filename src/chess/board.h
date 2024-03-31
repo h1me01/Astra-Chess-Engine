@@ -92,6 +92,8 @@ namespace Chess {
 
         bool inCheck() const;
 
+        bool nonPawnMaterial(Color c) const;
+
         template<bool updateNNUE>
         void makeMove(Move move);
 

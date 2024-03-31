@@ -19,11 +19,10 @@
 #ifndef ASTRA_SEARCH_H
 #define ASTRA_SEARCH_H
 
-#include "pvtable.h"
-#include "moveordering.h"
 #include "timemanager.h"
-
-#include "../eval/evaluate.h"
+#include "pvtable.h"
+#include "tt.h"
+#include "moveordering.h"
 
 namespace Astra {
 
@@ -31,13 +30,13 @@ namespace Astra {
     public:
         explicit Search(Board &board);
 
-        void printPv(int numLines);
+        void printPv(int depth);
 
         // set search time per move to 1000ms
         Move findBestMove(unsigned int timePerMove = 1000);
 
     private:
-        static const int MAX_DEPTH = 6;
+        static const int MAX_DEPTH = 64;
 
         int timePerMove;
 
@@ -54,8 +53,8 @@ namespace Astra {
         void clearData();
 
         int quiesceSearch(int alpha, int beta);
-        int negamax(int alpha, int beta, int depth, bool doNull);
-        int aspirationSearch(int depth, int prevEval, bool doNull);
+        int negamax(int alpha, int beta, int depth);
+        int aspirationSearch(int depth, int prevEval);
     };
 
 } // namespace Astra
