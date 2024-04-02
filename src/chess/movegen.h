@@ -252,19 +252,17 @@ namespace Chess {
                 s = popLsb(&pinnedPawns);
 
                 if (squareRank(s) == relativeRank(Us, RANK_7)) {
-                    // quiet promotions are impossible since the square in front of the pawn will
-                    // either be occupied by the king or the pinner, or doing so would leave our king in check
                     U64 attacks = pawnAttacks(Us, s) & captureMask & LINE[ourKingSq][s];
+                    // quiet promotions are impossible since it would leave the king in check
                     numMoves += make<PROMOTION_CAPTURES>(moves, s, attacks);
                 } else {
                     U64 attacks = pawnAttacks(Us, s) & captureMask & LINE[s][ourKingSq];
                     numMoves += make<CAPTURE>(moves, s, attacks);
 
-                    // single pawn pushes
-                    attacks = shift(relativeDir(Us, NORTH), SQUARE_BB[s]) & ~occ & LINE[ourKingSq][s];
-                    // double pawn pushes
-                    U64 doublePush = shift(relativeDir(Us, NORTH), attacks & MASK_RANK[relativeRank(Us, RANK_3)]);
-                    numMoves += make<QUIET>(moves, s, attacks);
+                    U64 singlePush = shift(relativeDir(Us, NORTH), SQUARE_BB[s]) & ~occ & LINE[ourKingSq][s];
+                    numMoves += make<QUIET>(moves, s, singlePush);
+
+                    U64 doublePush = shift(relativeDir(Us, NORTH), singlePush & MASK_RANK[relativeRank(Us, RANK_3)]);
                     numMoves += make<DOUBLE_PUSH>(moves, s, doublePush & ~occ & LINE[ourKingSq][s]);
                 }
             }
@@ -280,9 +278,9 @@ namespace Chess {
                     s = popLsb(&canCapture);
                     // pseudo-pinned e.p. case
                     U64 newOccMask = occ ^ SQUARE_BB[s] ^ shift(relativeDir(Us, SOUTH), SQUARE_BB[epSq]);
-                    U64 slidingAttack = slidingAttacks(ourKingSq, newOccMask, MASK_RANK[squareRank(ourKingSq)]);
+                    U64 attacker = slidingAttacks(ourKingSq, newOccMask, MASK_RANK[squareRank(ourKingSq)]);
 
-                    if ((slidingAttack & theirOrthSliders) == 0) {
+                    if ((attacker & theirOrthSliders) == 0) {
                         *moves++ = Move(s, epSq, EN_PASSANT);
                         numMoves++;
                     }
