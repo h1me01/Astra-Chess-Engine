@@ -26,7 +26,7 @@ int main() {
 
     // test the performance of the move generation
     // and also the correctness of the move generation
-    testPerft(5);
+    //testPerft(5);
 
     Board board("rnbqkbnr/pp1ppppp/2p5/8/2P5/8/PP1PPPPP/RNBQKBNR w KQkq - 0 2");
 

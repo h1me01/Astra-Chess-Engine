@@ -17,6 +17,7 @@
 */
 
 #include "search.h"
+#include "../chess/movegen.h"
 #include "../eval/evaluate.h"
 
 namespace Astra {
@@ -82,7 +83,7 @@ namespace Astra {
         }
 
         Move moves[MAX_MOVES];
-        int numMoves = 0;
+        int numMoves = genLegalMoves<CAPTURE_MOVES>(board, moves);
 
         // apply move ordering to sort the moves from best to worst
         moveOrdering.sortMoves<QSEARCH>(board, moves, numMoves, entry.move, ply);
@@ -90,11 +91,6 @@ namespace Astra {
         Move bestMove;
         for (int i = 0; i < numMoves; ++i) {
             Move move = moves[i];
-
-            // skip the move if it is not a capture
-            if (!isCapture(move)) {
-                continue;
-            }
 
             // Static Exchange Evaluation (SEE)
             if (!inCheck && seeCapture(board, move) < 0) {
@@ -261,7 +257,7 @@ namespace Astra {
 
         // generate all legal moves
         Move moves[MAX_MOVES];
-        int numMoves = 0;
+        int numMoves = genLegalMoves(board, moves);
 
         // apply move ordering to sort the moves from best to worst
         moveOrdering.sortMoves<NEGAMAX>(board, moves, numMoves, entry.move, ply);
