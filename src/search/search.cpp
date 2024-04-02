@@ -82,7 +82,7 @@ namespace Astra {
             alpha = standPat;
         }
 
-        Move moves[MAX_MOVES];
+        Move moves[MAX_CAPTURE_MOVES];
         int numMoves = genLegalMoves<CAPTURE_MOVES>(board, moves);
 
         // apply move ordering to sort the moves from best to worst

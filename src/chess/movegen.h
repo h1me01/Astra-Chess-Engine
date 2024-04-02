@@ -13,7 +13,7 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <https://www.gnu.org/licenses/>.
+   along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
 
 #ifndef ASTRA_MOVEGEN_H
@@ -25,8 +25,7 @@ namespace Chess {
 
     enum GenType {
         ALL_MOVES,
-        CAPTURE_MOVES,
-        QUIET_MOVES
+        CAPTURE_MOVES
     };
 
     // helper to generate quiet moves
@@ -193,7 +192,7 @@ namespace Chess {
         U64 attacks;
 
         // pinned pieces cannot move if king is in check
-        if(checkersCount == 0) {
+        if (checkersCount == 0) {
             const Square ourKingSq = board.kingSquare(Us);
 
             // for each pinned rook, bishop or queen
@@ -203,11 +202,8 @@ namespace Chess {
                 // only include getAttacks that are aligned with our king
                 attacks = getAttacks(typeOfPiece(board.getPiece(s)), s, occ) & LINE[ourKingSq][s];
 
-                if(type != QUIET_MOVES) {
-                    numMoves += make<CAPTURE>(moves, s, attacks & captureMask);
-                }
-
-                if(type != CAPTURE_MOVES) {
+                numMoves += make<CAPTURE>(moves, s, attacks & captureMask);
+                if (type != CAPTURE_MOVES) {
                     numMoves += make<QUIET>(moves, s, attacks & quietMask);
                 }
             }
@@ -219,11 +215,8 @@ namespace Chess {
             s = popLsb(&ourKnights);
             attacks = getAttacks(KNIGHT, s, occ);
 
-            if(type != QUIET_MOVES) {
-                numMoves += make<CAPTURE>(moves, s, attacks & captureMask);
-            }
-
-            if(type != CAPTURE_MOVES) {
+            numMoves += make<CAPTURE>(moves, s, attacks & captureMask);
+            if (type != CAPTURE_MOVES) {
                 numMoves += make<QUIET>(moves, s, attacks & quietMask);
             }
         }
@@ -234,11 +227,8 @@ namespace Chess {
             s = popLsb(&ourDiagSliders);
             attacks = getAttacks(BISHOP, s, occ);
 
-            if(type != QUIET_MOVES) {
-                numMoves += make<CAPTURE>(moves, s, attacks & captureMask);
-            }
-
-            if(type != CAPTURE_MOVES) {
+            numMoves += make<CAPTURE>(moves, s, attacks & captureMask);
+            if (type != CAPTURE_MOVES) {
                 numMoves += make<QUIET>(moves, s, attacks & quietMask);
             }
         }
@@ -249,11 +239,8 @@ namespace Chess {
             s = popLsb(&ourOrthSliders);
             attacks = getAttacks(ROOK, s, occ);
 
-            if(type != QUIET_MOVES) {
-                numMoves += make<CAPTURE>(moves, s, attacks & captureMask);
-            }
-
-            if(type != CAPTURE_MOVES) {
+            numMoves += make<CAPTURE>(moves, s, attacks & captureMask);
+            if (type != CAPTURE_MOVES) {
                 numMoves += make<QUIET>(moves, s, attacks & quietMask);
             }
         }
@@ -271,23 +258,21 @@ namespace Chess {
         Square s;
 
         // pinned pawns cannot move if king is in check
-        if(checkersCount == 0) {
+        if (checkersCount == 0) {
             // for each pinned pawn
             U64 pinnedPawns = board.pinned & board.getPieceBB(Us, PAWN);
             while (pinnedPawns) {
                 s = popLsb(&pinnedPawns);
 
-                if (squareRank(s) == relativeRank(Us, RANK_7) && type != QUIET_MOVES) {
+                if (squareRank(s) == relativeRank(Us, RANK_7)) {
                     U64 attacks = pawnAttacks(Us, s) & captureMask & LINE[ourKingSq][s];
                     // quiet promotions are impossible since it would leave the king in check
                     numMoves += make<PROMOTION_CAPTURES>(moves, s, attacks);
                 } else {
-                    if(type != QUIET_MOVES) {
-                        U64 attacks = pawnAttacks(Us, s) & captureMask & LINE[s][ourKingSq];
-                        numMoves += make<CAPTURE>(moves, s, attacks);
-                    }
+                    U64 attacks = pawnAttacks(Us, s) & captureMask & LINE[s][ourKingSq];
+                    numMoves += make<CAPTURE>(moves, s, attacks);
 
-                    if(type != CAPTURE_MOVES) {
+                    if (type != CAPTURE_MOVES) {
                         U64 singlePush = shift(relativeDir(Us, NORTH), SQUARE_BB[s]) & ~occ & LINE[ourKingSq][s];
                         numMoves += make<QUIET>(moves, s, singlePush);
 
@@ -298,7 +283,7 @@ namespace Chess {
             }
 
             // e.p. moves
-            if(epSq != NO_SQUARE && type != QUIET_MOVES) {
+            if (epSq != NO_SQUARE) {
                 const U64 theirOrthSliders = board.getOrthSliders(~Us);
 
                 U64 epCaptureBB = pawnAttacks(~Us, epSq) & board.getPieceBB(Us, PAWN);
@@ -348,14 +333,14 @@ namespace Chess {
 
         // pawn captures
         U64 leftCaptures = shift(relativeDir(Us, NORTH_WEST), ourPawns) & captureMask;
-        while (leftCaptures && type != QUIET_MOVES) {
+        while (leftCaptures) {
             s = popLsb(&leftCaptures);
             *moves++ = Move(s - relativeDir(Us, NORTH_WEST), s, CAPTURE);
             numMoves++;
         }
 
         U64 rightCaptures = shift(relativeDir(Us, NORTH_EAST), ourPawns) & captureMask;
-        while (rightCaptures && type != QUIET_MOVES) {
+        while (rightCaptures) {
             s = popLsb(&rightCaptures);
             *moves++ = Move(s - relativeDir(Us, NORTH_EAST), s, CAPTURE);
             numMoves++;
@@ -384,7 +369,7 @@ namespace Chess {
 
             // promotion captures
             attacks = shift(relativeDir(Us, NORTH_WEST), ourPawns) & captureMask;
-            while (attacks && type != QUIET_MOVES) {
+            while (attacks) {
                 Square s = popLsb(&attacks);
                 for (MoveFlags mf: {PC_KNIGHT, PC_BISHOP, PC_ROOK, PC_QUEEN}) {
                     *moves++ = Move(s - relativeDir(Us, NORTH_WEST), s, mf);
@@ -393,7 +378,7 @@ namespace Chess {
             }
 
             attacks = shift(relativeDir(Us, NORTH_EAST), ourPawns) & captureMask;
-            while (attacks && type != QUIET_MOVES) {
+            while (attacks) {
                 Square s = popLsb(&attacks);
                 for (MoveFlags mf: {PC_KNIGHT, PC_BISHOP, PC_ROOK, PC_QUEEN}) {
                     *moves++ = Move(s - relativeDir(Us, NORTH_EAST), s, mf);
@@ -420,8 +405,11 @@ namespace Chess {
 
         // generate king moves
         U64 b = getAttacks(KING, ourKingSq, occ) & ~(ourOcc | danger);
+
         numMoves += make<CAPTURE>(moves, ourKingSq, b & theirOcc);
-        numMoves += make<QUIET>(moves, ourKingSq, b & ~theirOcc);
+        if (type != CAPTURE_MOVES) {
+            numMoves += make<QUIET>(moves, ourKingSq, b & ~theirOcc);
+        }
 
         // if double check, then only king moves are legal
         int checkersCount = sparsePopCount(board.checkers);
@@ -474,7 +462,7 @@ namespace Chess {
             // and we can move to any square which is not occupied
             quietMask = ~occ;
 
-            if(type != CAPTURE_MOVES) {
+            if (type != CAPTURE_MOVES) {
                 numMoves += genCastlingMoves<Us>(board, moves, occ, danger);
             }
         }

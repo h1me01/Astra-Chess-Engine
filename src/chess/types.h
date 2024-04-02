@@ -139,6 +139,10 @@ namespace Chess {
     // if more than 128 moves are generated, then the engine is cooked 💀
     const int MAX_MOVES = 128;
 
+    // max number of possible legal captures in chess are 74
+    // if more than 28 captures are generated, then the engine is cooked 💀
+    const int MAX_CAPTURE_MOVES = 28;
+
     class Move {
     public:
         // default null move (a1a1)
