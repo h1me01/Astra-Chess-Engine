@@ -26,32 +26,12 @@ int main() {
 
     // test the performance of the move generation
     // and also the correctness of the move generation
-    //testPerft(5);
+    testPerft(5);
 
     Board board("rnbqkbnr/pp1ppppp/2p5/8/2P5/8/PP1PPPPP/RNBQKBNR w KQkq - 0 2");
 
     Astra::Search search(board);
     search.findBestMove(0);
-
-    return 0;
-
-    while (true) {
-        Astra::Search search(board);
-        Move bestMove = search.findBestMove();
-
-        board.makeMove<true>(bestMove);
-        board.pgn();
-        std::cout << std::endl;
-
-        Move moves[MAX_MOVES];
-        int numMoves = board.genLegalMoves(moves);
-
-        if(board.isDraw() || numMoves == 0) {
-            break;
-        }
-    }
-
-    board.pgn();
 
     return 0;
 }

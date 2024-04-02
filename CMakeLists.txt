@@ -12,7 +12,6 @@ add_executable(Astra_Chess_Engine
         src/chess/attacks.cpp
         src/chess/board.cpp
         src/chess/board.h
-        src/chess/movegen.cpp
         src/chess/movegen.h
         src/chess/perft.h
         src/search/search.cpp

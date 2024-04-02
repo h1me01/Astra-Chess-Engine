@@ -103,8 +103,6 @@ namespace Chess {
 
         void unmakeNullMove();
 
-        int genLegalMoves(Move *moves);
-
         bool isThreefold() const;
 
         bool isInsufficientMaterial() const;

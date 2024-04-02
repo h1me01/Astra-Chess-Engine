@@ -21,6 +21,7 @@
 
 #include <chrono>
 #include "board.h"
+#include "movegen.h"
 
 namespace Chess {
 
@@ -80,7 +81,7 @@ namespace Chess {
         U64 nodes = 0;
 
         Move moves[MAX_MOVES];
-        int numMoves = board.genLegalMoves(moves);
+        int numMoves = genLegalMoves(board, moves);
 
         if (depth == 1) {
             return (U64) numMoves;
@@ -114,6 +115,7 @@ namespace Chess {
                 // check if number of nodes are correct
                 if (nodes != testCase.results[depth - 1].second) {
                     std::cerr << "Test failed! Expected Nodes: " << testCase.results[depth - 1].second << std::endl;
+                    std::cerr << "Actual Nodes: " << nodes << std::endl;
                     exit(1);
                 } else {
                     std::chrono::duration<double, std::milli> diff = end - start;

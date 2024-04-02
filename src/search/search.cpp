@@ -82,7 +82,7 @@ namespace Astra {
         }
 
         Move moves[MAX_MOVES];
-        int numMoves = board.genLegalMoves(moves);
+        int numMoves = 0;
 
         // apply move ordering to sort the moves from best to worst
         moveOrdering.sortMoves<QSEARCH>(board, moves, numMoves, entry.move, ply);
@@ -261,7 +261,7 @@ namespace Astra {
 
         // generate all legal moves
         Move moves[MAX_MOVES];
-        int numMoves = board.genLegalMoves(moves);
+        int numMoves = 0;
 
         // apply move ordering to sort the moves from best to worst
         moveOrdering.sortMoves<NEGAMAX>(board, moves, numMoves, entry.move, ply);
