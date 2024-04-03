@@ -61,52 +61,34 @@ namespace Chess {
         U64 pinned;
 
         Board(const std::string &fen);
-
         Board(const Board &other);
 
         void print(Color c);
-
         void pgn();
 
         std::string getFen() const;
 
         U64 getPieceBB(Color c, PieceType pt) const { return pieceBB[makePiece(c, pt)]; }
-
         Piece getPiece(Square s) const { return board[s]; }
-
         Color sideToMove() const { return stm; }
-
         int getPly() const { return gamePly; }
-
         U64 getHash() const { return hash; }
-
         Square kingSquare(Color c) const;
 
-        U64 getDiagSliders(Color c) const;
-
-        U64 getOrthSliders(Color c) const;
-
         U64 getOccupancy(Color c) const;
-
         U64 isAttacked(Color c, Square s, U64 occ) const;
 
         bool inCheck() const;
 
-        bool nonPawnMaterial(Color c) const;
-
         template<bool updateNNUE>
         void makeMove(Move move);
-
         void unmakeMove();
 
         void makeNullMove();
-
         void unmakeNullMove();
 
         bool isThreefold() const;
-
         bool isInsufficientMaterial() const;
-
         bool isDraw() const;
 
         NNUE::accumulator &getAccumulator() { return accumulators->back(); }

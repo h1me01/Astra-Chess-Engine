@@ -74,6 +74,16 @@ namespace Chess {
     }
 
     template<Color Us>
+    U64 getDiagSliders(const Board& board) {
+        return board.getPieceBB(Us, BISHOP) | board.getPieceBB(Us, QUEEN);
+    }
+
+    template<Color Us>
+    U64 getOrthSliders(const Board& board) {
+        return board.getPieceBB(Us, ROOK) | board.getPieceBB(Us, QUEEN);
+    }
+
+    template<Color Us>
     U64 diagonalPawnAttacks(U64 pawns) {
         return Us == WHITE ?
                shift(NORTH_WEST, pawns) | shift(NORTH_EAST, pawns) :
@@ -101,14 +111,14 @@ namespace Chess {
         occ ^= SQUARE_BB[board.kingSquare(Us)];
 
         // enemy bishop and queen attacks
-        U64 theirDiagSliders = board.getDiagSliders(them);
+        U64 theirDiagSliders = getDiagSliders<them>(board);
         while (theirDiagSliders) {
             Square s = popLsb(&theirDiagSliders);
             danger |= getAttacks(BISHOP, s, occ);
         }
 
         // enemy rook and queen attacks
-        U64 theirOrthSliders = board.getOrthSliders(them);
+        U64 theirOrthSliders = getOrthSliders<them>(board);
         while (theirOrthSliders) {
             Square s = popLsb(&theirOrthSliders);
             danger |= getAttacks(ROOK, s, occ);
@@ -130,8 +140,8 @@ namespace Chess {
 
         // potential enemy bishop, rook and queen attacks at our king
         U64 candidates =
-                getAttacks(ROOK, kingSq, theirOcc) & board.getOrthSliders(them)
-                | getAttacks(BISHOP, kingSq, theirOcc) & board.getDiagSliders(them);
+                getAttacks(ROOK, kingSq, theirOcc) & getOrthSliders<them>(board)
+                | getAttacks(BISHOP, kingSq, theirOcc) & getDiagSliders<them>(board);
 
         pinned = 0;
         while (candidates) {
@@ -222,7 +232,7 @@ namespace Chess {
         }
 
         // bishops and queens
-        U64 ourDiagSliders = board.getDiagSliders(Us) & ~board.pinned;
+        U64 ourDiagSliders = getDiagSliders<Us>(board) & ~board.pinned;
         while (ourDiagSliders) {
             s = popLsb(&ourDiagSliders);
             attacks = getAttacks(BISHOP, s, occ);
@@ -234,7 +244,7 @@ namespace Chess {
         }
 
         // rooks and queens
-        U64 ourOrthSliders = board.getOrthSliders(Us) & ~board.pinned;
+        U64 ourOrthSliders = getOrthSliders<Us>(board) & ~board.pinned;
         while (ourOrthSliders) {
             s = popLsb(&ourOrthSliders);
             attacks = getAttacks(ROOK, s, occ);
@@ -251,6 +261,7 @@ namespace Chess {
     template<Color Us, GenType type>
     int genPawnMoves(const Board &board, Move *&moves, U64 occ, U64 quietMask, U64 captureMask, int checkersCount) {
         int numMoves = 0;
+        constexpr Color them = ~Us;
         const Square epSq = board.history[board.getPly()].epSquare;
         const Square ourKingSq = board.kingSquare(Us);
 
@@ -284,9 +295,9 @@ namespace Chess {
 
             // e.p. moves
             if (epSq != NO_SQUARE) {
-                const U64 theirOrthSliders = board.getOrthSliders(~Us);
+                const U64 theirOrthSliders = getOrthSliders<them>(board);
 
-                U64 epCaptureBB = pawnAttacks(~Us, epSq) & board.getPieceBB(Us, PAWN);
+                U64 epCaptureBB = pawnAttacks(them, epSq) & board.getPieceBB(Us, PAWN);
                 U64 canCapture = epCaptureBB & ~board.pinned;
 
                 while (canCapture) {
@@ -404,11 +415,11 @@ namespace Chess {
         board.checkers = checkerMask<Us>(board, ourKingSq, board.pinned);
 
         // generate king moves
-        U64 b = getAttacks(KING, ourKingSq, occ) & ~(ourOcc | danger);
+        U64 attacks = getAttacks(KING, ourKingSq, occ) & ~(ourOcc | danger);
 
-        numMoves += make<CAPTURE>(moves, ourKingSq, b & theirOcc);
+        numMoves += make<CAPTURE>(moves, ourKingSq, attacks & theirOcc);
         if (type != CAPTURE_MOVES) {
-            numMoves += make<QUIET>(moves, ourKingSq, b & ~theirOcc);
+            numMoves += make<QUIET>(moves, ourKingSq, attacks & ~theirOcc);
         }
 
         // if double check, then only king moves are legal
@@ -433,7 +444,6 @@ namespace Chess {
                 if (board.checkers == shift(relativeDir(Us, SOUTH), SQUARE_BB[epSq])) {
                     const U64 ourPawns = board.getPieceBB(Us, PAWN);
 
-                    // b1 contains our pawns that can capture the checker e.p.
                     canCapture = pawnAttacks(them, epSq) & ourPawns & ~board.pinned;
                     while (canCapture) {
                         *moves++ = Move(popLsb(&canCapture), epSq, EN_PASSANT);
@@ -442,7 +452,7 @@ namespace Chess {
                 }
             }
 
-            // if checker is either a pawn or a knight, the only legal moves are to capture the checker
+            // if checker is either a pawn or a knight, the only legal moves are to capture it
             if (checkerPiece == makePiece(them, KNIGHT)) {
                 canCapture = board.isAttacked(Us, checkerSquare, occ) & ~board.pinned;
                 while (canCapture) {

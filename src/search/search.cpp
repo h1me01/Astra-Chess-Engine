@@ -32,6 +32,16 @@ namespace Astra {
     const int DELTA_PIECE_VALUES[] = {114, 281, 297, 512, 936, 0, 0};
 
     /*
+     * Helper Functions
+     */
+    bool nonPawnMaterial(Board& board) {
+        Color c = board.sideToMove();
+
+        return board.getPieceBB(c, KNIGHT) | board.getPieceBB(c, BISHOP) |
+                board.getPieceBB(c, ROOK) | board.getPieceBB(c, QUEEN);
+    }
+
+    /*
      * Search
      */
     Search::Search(Board &board) : board(board), tt(16), searchedNodes(0), ply(0) {
@@ -100,7 +110,7 @@ namespace Astra {
             // Delta Pruning
             int captureValue = DELTA_PIECE_VALUES[typeOfPiece(board.getPiece(move.to()))];
 
-            if (!isPromotion(move) && !inCheck && standPat + DELTA_MARGIN + captureValue < alpha && board.nonPawnMaterial(stm)) {
+            if (!isPromotion(move) && !inCheck && standPat + DELTA_MARGIN + captureValue < alpha && nonPawnMaterial(board)) {
                 continue;
             }
 
@@ -217,7 +227,7 @@ namespace Astra {
             }
 
             // Null Move Pruning
-            if (!board.nonPawnMaterial(board.sideToMove()) && depth >= 3 &&  staticEval >= beta) {
+            if (!nonPawnMaterial(board) && depth >= 3 &&  staticEval >= beta) {
                 int R = 5 + std::min(4, depth / 5) + std::min(3, (staticEval - beta) / 214);
 
                 board.makeNullMove();

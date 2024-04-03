@@ -69,12 +69,7 @@ namespace Chess {
     };
 
     std::vector<TestCase> testCases = {
-            test1,
-            test2,
-            test3,
-            test4,
-            test5,
-            test6
+            test1, test2, test3, test4, test5, test6
     };
 
     U64 perft(Board &board, int depth) {
