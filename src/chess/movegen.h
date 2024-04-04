@@ -37,11 +37,11 @@ namespace Chess {
     }
 
     constexpr U64 shortCastlingBlockersMask(Color c) {
-        return c == WHITE ? WHITE_OO_BLOCKERS_AND_ATTACKERS_MASK : BLACK_OO_BLOCKERS_AND_ATTACKERS_MASK;
+        return c == WHITE ? 0x60 : 0x6000000000000000;
     }
 
     constexpr U64 longCastlingBlockersMask(Color c) {
-        return c == WHITE ? WHITE_OOO_BLOCKERS_AND_ATTACKERS_MASK : BLACK_OOO_BLOCKERS_AND_ATTACKERS_MASK;
+        return c == WHITE ? 0xe : 0xE00000000000000;
     }
 
     constexpr U64 ignoreLongCastlingDanger(Color c) {
