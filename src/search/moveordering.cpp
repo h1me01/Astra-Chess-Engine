@@ -63,6 +63,8 @@ namespace Astra {
     }
 
     int seeCapture(Board &board, Move &captureMove) {
+        assert(isCapture(captureMove));
+
         PieceType to = typeOfPiece(board.getPiece(captureMove.to()));
 
         board.makeMove<false>(captureMove);
@@ -85,9 +87,9 @@ namespace Astra {
             {0, 705, 704, 703, 702, 701, 700, 0}
     };
 
-    int mvvlva(Board &board, Move move) {
-        int attacker = board.getPiece(move.from()) + 1;
-        int victim = board.getPiece(move.to()) + 1;
+    int mvvlva(Board &board, Move &move) {
+        int attacker = typeOfPiece(board.getPiece(move.from())) + 1;
+        int victim = typeOfPiece(board.getPiece(move.to())) + 1;
         return mvvlvaArray[victim][attacker];
     }
 
@@ -126,10 +128,8 @@ namespace Astra {
         // check if move is a capture, return error if it is
         assert(!isCapture(move));
 
-        if (!Move::isSame(move, killer1[ply])) {
-            killer2[ply] = killer1[ply];
-            killer1[ply] = move;
-        }
+        killer2[ply] = killer1[ply];
+        killer1[ply] = move;
     }
 
 } // namespace Astra

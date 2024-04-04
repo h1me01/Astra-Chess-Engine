@@ -136,26 +136,6 @@ namespace Chess {
 
     const U64 ALL_CASTLING_MASK = 0x9100000000000091;
 
-    constexpr U64 shortCastlingMask(Color c) {
-        return c == WHITE ? WHITE_OO_MASK : BLACK_OO_MASK;
-    }
-
-    constexpr U64 longCastlingMask(Color c) {
-        return c == WHITE ? WHITE_OOO_MASK : BLACK_OOO_MASK;
-    }
-
-    constexpr U64 shortCastlingBlockersMask(Color c) {
-        return c == WHITE ? WHITE_OO_BLOCKERS_AND_ATTACKERS_MASK : BLACK_OO_BLOCKERS_AND_ATTACKERS_MASK;
-    }
-
-    constexpr U64 longCastlingBlockersMask(Color c) {
-        return c == WHITE ? WHITE_OOO_BLOCKERS_AND_ATTACKERS_MASK : BLACK_OOO_BLOCKERS_AND_ATTACKERS_MASK;
-    }
-
-    constexpr U64 ignoreLongCastlingDanger(Color c) {
-        return c == WHITE ? 0x2 : 0x200000000000000;
-    }
-
     // returns the index of the least significant bit in the bitboard
     const int DEBRUIJN64[64] = {
             0, 47, 1, 56, 48, 27, 2, 60,
@@ -174,21 +154,21 @@ namespace Chess {
     }
 
     // returns number of setFen bits in the bitboard
-    inline int popCount(U64 x) {
-        x = x - ((x >> 1) & 0x5555555555555555);
-        x = (x & 0x3333333333333333) + ((x >> 2) & 0x3333333333333333);
-        x = (x + (x >> 4)) & 0x0f0f0f0f0f0f0f0f;
-        x = (x * 0x0101010101010101) >> 56;
-        return int(x);
+    inline int popCount(U64 b) {
+        b = b - ((b >> 1) & 0x5555555555555555);
+        b = (b & 0x3333333333333333) + ((b >> 2) & 0x3333333333333333);
+        b = (b + (b >> 4)) & 0x0f0f0f0f0f0f0f0f;
+        b = (b * 0x0101010101010101) >> 56;
+        return int(b);
     }
 
     // returns number of set bits in the bitboard.
-    // Faster than popCount when the bitboard has few bits
-    inline int sparsePopCount(U64 x) {
+    // faster than popCount when the bitboard has few bits
+    inline int sparsePopCount(U64 b) {
         int count = 0;
-        while (x) {
+        while (b) {
             count++;
-            x &= x - 1;
+            b &= b - 1;
         }
         return count;
     }

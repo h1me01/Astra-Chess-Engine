@@ -60,36 +60,50 @@ namespace Chess {
         U64 quietMask;
 
         Board(const std::string &fen);
+
         Board(const Board &other);
 
         void print(Color c);
 
         std::string getFen() const;
+
         U64 getPieceBB(Color c, PieceType pt) const { return pieceBB[makePiece(c, pt)]; }
+
         Piece getPiece(Square s) const { return board[s]; }
+
         Color sideToMove() const { return stm; }
+
         int getPly() const { return gamePly; }
+
         U64 getHash() const { return hash; }
 
         Square kingSquare(Color c) const;
+
         U64 getOccupancy(Color c) const;
+
         U64 isAttacked(Color c, Square s, U64 occ) const;
 
         bool inCheck() const;
+
         bool nonPawnMaterial(Color c) const;
 
         U64 getDiagSliders(Color c) const;
+
         U64 getOrthSliders(Color c) const;
 
         template<bool updateNNUE>
-        void makeMove(const Move& move);
-        void unmakeMove(const Move& move);
+        void makeMove(const Move &move);
+
+        void unmakeMove(const Move &move);
 
         void makeNullMove();
+
         void unmakeNullMove();
 
         bool isThreefold() const;
+
         bool isInsufficientMaterial() const;
+
         bool isDraw() const;
 
         NNUE::accumulator &getAccumulator() { return accumulators->back(); }
@@ -104,7 +118,7 @@ namespace Chess {
         U64 hash;
 
         template<bool updateNNUE>
-        void castleHelper(Square from, Square kingTo, Square rookFrom, Square rookTo);
+        void castleHelper(Square kingFrom, Square kingTo, Square rookFrom, Square rookTo);
 
         template<bool updateNNUE>
         void putPiece(Piece pc, Square s);
@@ -126,7 +140,7 @@ namespace Chess {
      * MAKE MOVE
      */
     template<bool updateNNUE>
-    void Board::makeMove(const Move& move) {
+    void Board::makeMove(const Move &move) {
         const MoveFlags mf = move.flags();
         const Square from = move.from();
         const Square to = move.to();
@@ -137,6 +151,7 @@ namespace Chess {
 
         gamePly++;
         history[gamePly] = StateInfo(history[gamePly - 1]);
+        history[gamePly].castleMask |= mask;
         history[gamePly].halfMoveClock++;
 
         if constexpr (updateNNUE) {
@@ -147,23 +162,7 @@ namespace Chess {
             history[gamePly].halfMoveClock = 0;
         }
 
-        // update castle mask
-        history[gamePly].castleMask |= mask;
-
-        // handle castling
-        if (mf == OO) {
-            if (stm == WHITE) {
-                castleHelper<updateNNUE>(e1, g1, h1, f1);
-            } else {
-                castleHelper<updateNNUE>(e8, g8, h8, f8);
-            }
-        } else if (mf == OOO) {
-            if (stm == WHITE) {
-                castleHelper<updateNNUE>(e1, c1, a1, d1);
-            } else {
-                castleHelper<updateNNUE>(e8, c8, a8, d8);
-            }
-        } else if (mf == QUIET || mf == DOUBLE_PUSH || mf == EN_PASSANT) {
+        if (mf == QUIET || mf == DOUBLE_PUSH || mf == EN_PASSANT) {
             movePiece<updateNNUE>(from, to);
 
             if (mf == DOUBLE_PUSH) {
@@ -171,6 +170,18 @@ namespace Chess {
             } else if (mf == EN_PASSANT) {
                 removePiece<updateNNUE>(Square(to ^ 8));
             }
+        } else if (mf == OO || mf == OOO) {
+            Square rookFrom, rookTo;
+
+            if (mf == OO) {
+                rookFrom = stm == WHITE ? h1 : h8;
+                rookTo = stm == WHITE ? f1 : f8;
+            } else {
+                rookFrom = stm == WHITE ? a1 : a8;
+                rookTo = stm == WHITE ? d1 : d8;
+            }
+
+            castleHelper<updateNNUE>(from, to, rookFrom, rookTo);
         } else if (mf >= PR_KNIGHT && mf <= PC_QUEEN) {
             removePiece<updateNNUE>(from);
 
@@ -206,13 +217,13 @@ namespace Chess {
      * PRIVATE FUNCTIONS
      */
     template<bool updateNNUE>
-    void Board::castleHelper(Square from, Square kingTo, Square rookFrom, Square rookTo) {
-        if (updateNNUE && NNUE::KING_BUCKET[from] != NNUE::KING_BUCKET[kingTo]) {
-            movePiece<false>(from, kingTo);
+    void Board::castleHelper(Square kingFrom, Square kingTo, Square rookFrom, Square rookTo) {
+        if (updateNNUE && NNUE::KING_BUCKET[kingFrom] != NNUE::KING_BUCKET[kingTo]) {
+            movePiece<false>(kingFrom, kingTo);
             movePiece<false>(rookFrom, rookTo);
             refreshNNUE(getAccumulator());
         } else {
-            movePiece<updateNNUE>(from, kingTo);
+            movePiece<updateNNUE>(kingFrom, kingTo);
             movePiece<updateNNUE>(rookFrom, rookTo);
         }
     }

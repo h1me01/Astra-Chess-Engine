@@ -67,8 +67,8 @@ namespace Astra {
             }
         }
 
-        const Color stm = board.sideToMove();
-        const bool inCheck = board.inCheck();
+        Color stm = board.sideToMove();
+        bool inCheck = board.inCheck();
 
         int originalAlpha = alpha;
         int standPat = Eval::evaluate(board);
@@ -145,8 +145,8 @@ namespace Astra {
             return 0;
         }
 
-        const bool inCheck = board.inCheck();
-        const bool pvNode = (beta - alpha) != 1;
+        bool inCheck = board.inCheck();
+        bool pvNode = (beta - alpha) != 1;
 
         int originalAlpha = alpha;
         int bestScore = -VALUE_MATE;

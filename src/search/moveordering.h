@@ -36,7 +36,7 @@ namespace Astra {
     /*
      * Most Valuable Victim / Least Valuable Attacker
      */
-    int mvvlva(Board &board, Move move);
+    int mvvlva(Board &board, Move& move);
 
     /*
      * Move Ordering
@@ -76,49 +76,33 @@ namespace Astra {
 
     template<SearchType searchType>
     inline void MoveOrdering::sortMoves(Board &board, Move *moves, int numMoves, Move& ttMove, int ply) {
-        int scores[numMoves];
+        std::vector<int> scores(numMoves, 0);
+
         for (int i = 0; i < numMoves; ++i) {
             Move move = moves[i];
-            scores[i] = 0;
 
             if (ttMove != NULL_MOVE && move == ttMove) {
                 scores[i] = TT_SCORE;
-                continue;
-            }
-
-            if constexpr (searchType == QSEARCH) {
+            } else if constexpr (searchType == QSEARCH) {
                 scores[i] = CAPTURE_SCORE + mvvlva(board, move);
-                continue;
-            }
-
-            if (isCapture(move)) {
+            } else if (isCapture(move)) {
                 int seeScore = seeCapture(board, move);
                 scores[i] = seeScore >= 0 ? CAPTURE_SCORE + mvvlva(board, move) : mvvlva(board, move);
-                continue;
-            }
-
-            if (move == killer1[ply]) {
+            } else if (move == killer1[ply]) {
                 scores[i] = KILLER_ONE_SCORE;
-                continue;
             } else if (move == killer2[ply]) {
                 scores[i] = KILLER_TWO_SCORE;
-                continue;
+            } else {
+                scores[i] = getHistoryScore(board, move);
             }
-
-            scores[i] = getHistoryScore(board, move);
         }
 
         // Bubble Sort
         for (int i = 0; i < numMoves - 1; ++i) {
             for (int j = 0; j < numMoves - i - 1; ++j) {
                 if (scores[j] < scores[j + 1]) {
-                    Move tempMove = moves[j];
-                    moves[j] = moves[j + 1];
-                    moves[j + 1] = tempMove;
-
-                    int tempScore = scores[j];
-                    scores[j] = scores[j + 1];
-                    scores[j + 1] = tempScore;
+                    std::swap(moves[j], moves[j + 1]);
+                    std::swap(scores[j], scores[j + 1]);
                 }
             }
         }

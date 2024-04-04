@@ -46,8 +46,8 @@ namespace Chess {
     }
 
     // helper to determine the type of the promotion
-    inline PieceType typeOfPromotion(MoveFlags f) {
-        switch (f) {
+    inline PieceType typeOfPromotion(MoveFlags mf) {
+        switch (mf) {
             case PR_KNIGHT:
             case PC_KNIGHT:
                 return KNIGHT;

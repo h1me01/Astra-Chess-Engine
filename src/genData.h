@@ -81,8 +81,7 @@ std::vector<NetInput> fenToInput(const std::vector<Dataset> &_dataset) {
         NetInput input;
         input.target = i.eval;
 
-        Board board;
-        board.setFen(i.fen);
+        Board board(i.fen);
 
         for (PieceType pt: {PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING}) {
             input.pieces[WHITE][pt] = board.getPieceBB(WHITE, pt);

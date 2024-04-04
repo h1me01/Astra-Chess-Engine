@@ -28,6 +28,26 @@ namespace Chess {
         CAPTURE_MOVES
     };
 
+    constexpr U64 shortCastlingMask(Color c) {
+        return c == WHITE ? WHITE_OO_MASK : BLACK_OO_MASK;
+    }
+
+    constexpr U64 longCastlingMask(Color c) {
+        return c == WHITE ? WHITE_OOO_MASK : BLACK_OOO_MASK;
+    }
+
+    constexpr U64 shortCastlingBlockersMask(Color c) {
+        return c == WHITE ? WHITE_OO_BLOCKERS_AND_ATTACKERS_MASK : BLACK_OO_BLOCKERS_AND_ATTACKERS_MASK;
+    }
+
+    constexpr U64 longCastlingBlockersMask(Color c) {
+        return c == WHITE ? WHITE_OOO_BLOCKERS_AND_ATTACKERS_MASK : BLACK_OOO_BLOCKERS_AND_ATTACKERS_MASK;
+    }
+
+    constexpr U64 ignoreLongCastlingDanger(Color c) {
+        return c == WHITE ? 0x2 : 0x200000000000000;
+    }
+
     // helper to generate quiet moves
     template<MoveFlags MF = QUIET>
     inline int make(Move *&moves, Square from, U64 to) {
@@ -162,7 +182,7 @@ namespace Chess {
         U64 isAllowed = castleMask & shortCastlingMask(Us);
 
         if (!(possibleChecks | isAllowed)) {
-            *moves++ = Us == WHITE ? Move(e1, h1, OO) : Move(e8, h8, OO);
+            *moves++ = Us == WHITE ? Move(e1, g1, OO) : Move(e8, g8, OO);
             numMoves++;
         }
 
