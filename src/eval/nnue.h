@@ -22,7 +22,6 @@ extern int32_t OUTPUT_BIAS[OUTPUTS];
 
 namespace NNUE {
 
-    // clang-format off
     constexpr int KING_BUCKET[64]{
             0, 0, 0, 0, 1, 1, 1, 1,
             0, 0, 0, 0, 1, 1, 1, 1,
@@ -33,8 +32,6 @@ namespace NNUE {
             2, 2, 2, 2, 3, 3, 3, 3,
             2, 2, 2, 2, 3, 3, 3, 3,
     };
-
-    // clang-format on
 
     using accumulator = std::array<std::array<int16_t, N_HIDDEN_SIZE>, 2>;
 

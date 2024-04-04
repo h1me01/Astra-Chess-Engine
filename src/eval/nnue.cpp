@@ -118,15 +118,13 @@ namespace NNUE {
 
         std::size_t readElements = 0;
         if (f != nullptr) {
-            readElements +=
-                    fread(INPUT_WEIGHTS, sizeof(int16_t), BUCKETS * FEATURE_SIZE * N_HIDDEN_SIZE, f);
+            readElements += fread(INPUT_WEIGHTS, sizeof(int16_t), BUCKETS * FEATURE_SIZE * N_HIDDEN_SIZE, f);
             readElements += fread(HIDDEN_BIAS, sizeof(int16_t), N_HIDDEN_SIZE, f);
             readElements += fread(HIDDEN_WEIGHTS, sizeof(int16_t), 2 * N_HIDDEN_SIZE, f);
             readElements += fread(OUTPUT_BIAS, sizeof(int32_t), OUTPUTS, f);
 
             if (readElements != fileSize) {
-                std::cout << "The network was not fully loaded"
-                          << " " << readElements << " " << fileSize << std::endl;
+                std::cout << "The network was not fully loaded" << " " << readElements << " " << fileSize << std::endl;
                 exit(2);
             }
 

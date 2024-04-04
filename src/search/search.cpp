@@ -160,7 +160,7 @@ namespace Astra {
             searchedNodes++;
 
             // do a quiescence search
-            return quiesceSearch(alpha, beta);
+            return Eval::evaluate(board);
         }
 
         // Transposition Table Probing
@@ -196,10 +196,6 @@ namespace Astra {
 
         // Internal Iterative Deepening
         if (depth >= 3 && !ttHit) {
-            depth--;
-        }
-
-        if (pvNode && !ttHit) {
             depth--;
         }
 
@@ -425,7 +421,6 @@ namespace Astra {
 
     // time per move in ms
     Move Search::findBestMove(unsigned int timePerMove) {
-        clearData();
         this->timePerMove = timePerMove;
 
         // set total time allowed for a game (in ms)
@@ -436,7 +431,6 @@ namespace Astra {
         // Iterative Deepening:
         for (int depth = 1; depth <= MAX_DEPTH; ++depth) {
             timeManager.start();
-
             // reset the pv table
             pvTable.reset();
 
@@ -460,7 +454,6 @@ namespace Astra {
                       << " nodes: " << searchedNodes << std::endl;
 
             prevEval = score;
-            //printPv(depth);
         }
 
         std::cout << std::endl;
