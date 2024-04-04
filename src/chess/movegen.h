@@ -447,12 +447,12 @@ namespace Chess {
 
             // we must capture the checking piece
             board.captureMask = board.checkers;
-            // or we can block it
+            // or we block it
             board.quietMask = SQUARES_BETWEEN[ourKingSq][checkerSquare];
         } else {
             // we can capture any enemy piece
             board.captureMask = theirOcc;
-            // and we can move to any square which is not occupied
+            // we can move to any square which is not occupied
             board.quietMask = ~occ;
 
             if (type != CAPTURE_MOVES) {
