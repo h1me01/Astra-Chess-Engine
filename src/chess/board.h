@@ -33,13 +33,11 @@ namespace Chess {
         Move move;
         Piece capturedPiece;
         Square epSquare;
+        U64 castleMask;
         int halfMoveClock;
-        /* bitboard of squares on which pieces have either moved from, or have been moved to.
-         * Used for castling legality checks
-         */ U64 entry;
 
         StateInfo() : hash(0), movedPiece(NO_PIECE), move(NULL_MOVE), capturedPiece(NO_PIECE),
-                      epSquare(NO_SQUARE), entry(0), halfMoveClock(0) {}
+                      epSquare(NO_SQUARE), castleMask(0), halfMoveClock(0) {}
 
         StateInfo(const StateInfo &prev) {
             hash = prev.hash;
@@ -47,7 +45,7 @@ namespace Chess {
             move = prev.move;
             capturedPiece = NO_PIECE;
             epSquare = NO_SQUARE;
-            entry = prev.entry;
+            castleMask = prev.castleMask;
             halfMoveClock = prev.halfMoveClock;
         }
     };
@@ -67,18 +65,21 @@ namespace Chess {
         void pgn();
 
         std::string getFen() const;
-
         U64 getPieceBB(Color c, PieceType pt) const { return pieceBB[makePiece(c, pt)]; }
         Piece getPiece(Square s) const { return board[s]; }
         Color sideToMove() const { return stm; }
         int getPly() const { return gamePly; }
         U64 getHash() const { return hash; }
-        Square kingSquare(Color c) const;
 
+        Square kingSquare(Color c) const;
         U64 getOccupancy(Color c) const;
         U64 isAttacked(Color c, Square s, U64 occ) const;
 
         bool inCheck() const;
+        bool nonPawnMaterial(Color c) const;
+
+        U64 getDiagSliders(Color c) const;
+        U64 getOrthSliders(Color c) const;
 
         template<bool updateNNUE>
         void makeMove(Move move);
@@ -131,11 +132,11 @@ namespace Chess {
         const Square to = move.to();
         const Piece pcFrom = board[from];
         const Piece pcTo = board[to];
+        const PieceType pt = typeOfPiece(pcFrom);
         const U64 mask = SQUARE_BB[from] | SQUARE_BB[to];
 
         gamePly++;
         history[gamePly] = StateInfo(history[gamePly - 1]);
-        history[gamePly].entry |= mask;
         history[gamePly].move = move;
         history[gamePly].movedPiece = pcFrom;
         history[gamePly].halfMoveClock++;
@@ -144,9 +145,12 @@ namespace Chess {
             accumulators->push();
         }
 
-        if(typeOfPiece(pcFrom) == PAWN || pcTo != NO_PIECE) {
+        if (pt == PAWN || pcTo != NO_PIECE) {
             history[gamePly].halfMoveClock = 0;
         }
+
+        // update castle mask
+        history[gamePly].castleMask |= mask;
 
         // handle castling
         if (mf == OO) {

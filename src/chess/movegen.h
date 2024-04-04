@@ -74,16 +74,6 @@ namespace Chess {
     }
 
     template<Color Us>
-    U64 getDiagSliders(const Board& board) {
-        return board.getPieceBB(Us, BISHOP) | board.getPieceBB(Us, QUEEN);
-    }
-
-    template<Color Us>
-    U64 getOrthSliders(const Board& board) {
-        return board.getPieceBB(Us, ROOK) | board.getPieceBB(Us, QUEEN);
-    }
-
-    template<Color Us>
     U64 diagonalPawnAttacks(U64 pawns) {
         return Us == WHITE ?
                shift(NORTH_WEST, pawns) | shift(NORTH_EAST, pawns) :
@@ -111,14 +101,14 @@ namespace Chess {
         occ ^= SQUARE_BB[board.kingSquare(Us)];
 
         // enemy bishop and queen attacks
-        U64 theirDiagSliders = getDiagSliders<them>(board);
+        U64 theirDiagSliders = board.getDiagSliders(them);
         while (theirDiagSliders) {
             Square s = popLsb(&theirDiagSliders);
             danger |= getAttacks(BISHOP, s, occ);
         }
 
         // enemy rook and queen attacks
-        U64 theirOrthSliders = getOrthSliders<them>(board);
+        U64 theirOrthSliders = board.getOrthSliders(them);
         while (theirOrthSliders) {
             Square s = popLsb(&theirOrthSliders);
             danger |= getAttacks(ROOK, s, occ);
@@ -140,8 +130,8 @@ namespace Chess {
 
         // potential enemy bishop, rook and queen attacks at our king
         U64 candidates =
-                getAttacks(ROOK, kingSq, theirOcc) & getOrthSliders<them>(board)
-                | getAttacks(BISHOP, kingSq, theirOcc) & getDiagSliders<them>(board);
+                getAttacks(ROOK, kingSq, theirOcc) & board.getOrthSliders(them)
+                | getAttacks(BISHOP, kingSq, theirOcc) & board.getDiagSliders(them);
 
         pinned = 0;
         while (candidates) {
@@ -164,7 +154,7 @@ namespace Chess {
     template<Color Us>
     int genCastlingMoves(const Board &board, Move *&moves, U64 occ, U64 danger) {
         int numMoves = 0;
-        const U64 castleMask = board.history[board.getPly()].entry;
+        const U64 castleMask = board.history[board.getPly()].castleMask;
 
         // checks if king would be in check if it moved to the castling square
         U64 possibleChecks = (occ | danger) & shortCastlingBlockersMask(Us);
@@ -172,9 +162,7 @@ namespace Chess {
         U64 isAllowed = castleMask & shortCastlingMask(Us);
 
         if (!(possibleChecks | isAllowed)) {
-            *moves++ = Us == WHITE ?
-                       Move(e1, h1, OO) :
-                       Move(e8, h8, OO);
+            *moves++ = Us == WHITE ? Move(e1, h1, OO) : Move(e8, h8, OO);
             numMoves++;
         }
 
@@ -183,9 +171,7 @@ namespace Chess {
         isAllowed = castleMask & longCastlingMask(Us);
 
         if (!(possibleChecks | isAllowed)) {
-            *moves++ = Us == WHITE ?
-                       Move(e1, c1, OOO) :
-                       Move(e8, c8, OOO);
+            *moves++ = Us == WHITE ? Move(e1, c1, OOO) : Move(e8, c8, OOO);
             numMoves++;
         }
 
@@ -232,7 +218,7 @@ namespace Chess {
         }
 
         // bishops and queens
-        U64 ourDiagSliders = getDiagSliders<Us>(board) & ~board.pinned;
+        U64 ourDiagSliders = board.getDiagSliders(Us) & ~board.pinned;
         while (ourDiagSliders) {
             s = popLsb(&ourDiagSliders);
             attacks = getAttacks(BISHOP, s, occ);
@@ -244,7 +230,7 @@ namespace Chess {
         }
 
         // rooks and queens
-        U64 ourOrthSliders = getOrthSliders<Us>(board) & ~board.pinned;
+        U64 ourOrthSliders = board.getOrthSliders(Us) & ~board.pinned;
         while (ourOrthSliders) {
             s = popLsb(&ourOrthSliders);
             attacks = getAttacks(ROOK, s, occ);
@@ -295,7 +281,7 @@ namespace Chess {
 
             // e.p. moves
             if (epSq != NO_SQUARE) {
-                const U64 theirOrthSliders = getOrthSliders<them>(board);
+                const U64 theirOrthSliders = board.getOrthSliders(them);
 
                 U64 epCaptureBB = pawnAttacks(them, epSq) & board.getPieceBB(Us, PAWN);
                 U64 canCapture = epCaptureBB & ~board.pinned;

@@ -43,13 +43,13 @@ namespace Chess {
         ss >> token;
         stm = token == 'w' ? WHITE : BLACK;
 
-        history[gamePly].entry = ALL_CASTLING_MASK;
+        history[gamePly].castleMask = ALL_CASTLING_MASK;
         while (ss >> token && !isspace(token)) {
             switch (token) {
-                case 'K': history[gamePly].entry &= ~WHITE_OO_MASK; break;
-                case 'Q': history[gamePly].entry &= ~WHITE_OOO_MASK; break;
-                case 'k': history[gamePly].entry &= ~BLACK_OO_MASK; break;
-                case 'q': history[gamePly].entry &= ~BLACK_OOO_MASK; break;
+                case 'K': history[gamePly].castleMask &= ~WHITE_OO_MASK; break;
+                case 'Q': history[gamePly].castleMask &= ~WHITE_OOO_MASK; break;
+                case 'k': history[gamePly].castleMask &= ~BLACK_OO_MASK; break;
+                case 'q': history[gamePly].castleMask &= ~BLACK_OOO_MASK; break;
                 default: break;
             }
         }
@@ -137,10 +137,10 @@ namespace Chess {
         }
 
         fen << (stm == WHITE ? " w " : " b ")
-            << (history[gamePly].entry & WHITE_OO_MASK ? "" : "K")
-            << (history[gamePly].entry & WHITE_OOO_MASK ? "" : "Q")
-            << (history[gamePly].entry & BLACK_OO_MASK ? "" : "k")
-            << (history[gamePly].entry & BLACK_OOO_MASK ? "" : "q")
+            << (history[gamePly].castleMask & WHITE_OO_MASK == 1 ? "" : "K")
+            << (history[gamePly].castleMask & WHITE_OOO_MASK == 1 ? "" : "Q")
+            << (history[gamePly].castleMask & BLACK_OO_MASK == 1 ? "" : "k")
+            << (history[gamePly].castleMask & BLACK_OOO_MASK == 1 ? "" : "q")
             << (castleNotationHelper(fen) ? " " : "- ")
             << (history[gamePly].epSquare == NO_SQUARE ? "-" : SQSTR[history[gamePly].epSquare]);
 
@@ -148,18 +148,43 @@ namespace Chess {
         return fen.str();
     }
 
+    bool Board::nonPawnMaterial(Color c) const {
+        return pieceBB[makePiece(c, KNIGHT)] | pieceBB[makePiece(c, BISHOP)] |
+               pieceBB[makePiece(c, ROOK)] | pieceBB[makePiece(c, QUEEN)];
+    }
+
+    U64 Board::getDiagSliders(Color c) const {
+        return c == WHITE ?
+               pieceBB[WHITE_BISHOP] | pieceBB[WHITE_QUEEN] :
+               pieceBB[BLACK_BISHOP] | pieceBB[BLACK_QUEEN];
+    }
+
+    // return the bitboard of all orthogonal sliders of a given color
+    U64 Board::getOrthSliders(Color c) const {
+        return c == WHITE ?
+               pieceBB[WHITE_ROOK] | pieceBB[WHITE_QUEEN] :
+               pieceBB[BLACK_ROOK] | pieceBB[BLACK_QUEEN];
+    }
+
     // return the bitboard of all pieces of a given color
     U64 Board::getOccupancy(Color c) const {
-        return getPieceBB(c, PAWN) | getPieceBB(c, KNIGHT) | getPieceBB(c, BISHOP) |
-               getPieceBB(c, ROOK) | getPieceBB(c, QUEEN) | getPieceBB(c, KING);
+        return c == WHITE ? pieceBB[WHITE_PAWN] | pieceBB[WHITE_KNIGHT] | pieceBB[WHITE_BISHOP] |
+                             pieceBB[WHITE_ROOK] | pieceBB[WHITE_QUEEN] | pieceBB[WHITE_KING] :
+                             pieceBB[BLACK_PAWN] | pieceBB[BLACK_KNIGHT] | pieceBB[BLACK_BISHOP] |
+                             pieceBB[BLACK_ROOK] | pieceBB[BLACK_QUEEN] | pieceBB[BLACK_KING];
     }
 
     // return the bitboard of all pieces of a given color that are attacking a given square
     U64 Board::isAttacked(Color c, Square s, U64 occ) const {
-        return (pawnAttacks(~c, s) & getPieceBB(c, PAWN)) |
-               (getAttacks(KNIGHT, s, occ) & getPieceBB(c, KNIGHT)) |
-               (getAttacks(BISHOP, s, occ) & (getPieceBB(c, BISHOP) | getPieceBB(c, QUEEN))) |
-               (getAttacks(ROOK, s, occ) & (getPieceBB(c, ROOK) | getPieceBB(c, QUEEN)));
+        return c == WHITE ?
+               (pawnAttacks(BLACK, s) & pieceBB[WHITE_PAWN]) |
+               (getAttacks(KNIGHT, s, occ) & pieceBB[WHITE_KNIGHT]) |
+               (getAttacks(BISHOP, s, occ) & (pieceBB[WHITE_BISHOP] | pieceBB[WHITE_QUEEN])) |
+               (getAttacks(ROOK, s, occ) & (pieceBB[WHITE_ROOK] | pieceBB[WHITE_QUEEN])) :
+               (pawnAttacks(WHITE, s) & pieceBB[BLACK_PAWN]) |
+               (getAttacks(KNIGHT, s, occ) & pieceBB[BLACK_KNIGHT]) |
+               (getAttacks(BISHOP, s, occ) & (pieceBB[BLACK_BISHOP] | pieceBB[BLACK_QUEEN])) |
+               (getAttacks(ROOK, s, occ) & (pieceBB[BLACK_ROOK] | pieceBB[BLACK_QUEEN]));
     }
 
     bool Board::inCheck() const {
