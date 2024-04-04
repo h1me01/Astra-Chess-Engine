@@ -129,10 +129,10 @@ namespace Chess {
         }
 
         fen << (stm == WHITE ? " w " : " b ")
-            << (history[gamePly].castleMask & WHITE_OO_MASK == 1 ? "" : "K")
-            << (history[gamePly].castleMask & WHITE_OOO_MASK == 1 ? "" : "Q")
-            << (history[gamePly].castleMask & BLACK_OO_MASK == 1 ? "" : "k")
-            << (history[gamePly].castleMask & BLACK_OOO_MASK == 1 ? "" : "q")
+            << (history[gamePly].castleMask & WHITE_OO_MASK ? "" : "K")
+            << (history[gamePly].castleMask & WHITE_OOO_MASK ? "" : "Q")
+            << (history[gamePly].castleMask & BLACK_OO_MASK ? "" : "k")
+            << (history[gamePly].castleMask & BLACK_OOO_MASK ? "" : "q")
             << (castleNotationHelper(fen) ? " " : "- ")
             << (history[gamePly].epSquare == NO_SQUARE ? "-" : SQSTR[history[gamePly].epSquare]);
 
