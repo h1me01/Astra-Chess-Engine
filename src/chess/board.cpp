@@ -20,7 +20,8 @@
 
 namespace Chess {
 
-    Board::Board(const std::string &fen) : pieceBB{0}, board{}, stm(WHITE), gamePly(0), hash(0), pinned(0), checkers(0) {
+    Board::Board(const std::string &fen) : pieceBB{0}, board{}, stm(WHITE), gamePly(0), hash(0),
+                                           checkers(0), pinned(0), danger(0), captureMask(0), quietMask(0) {
         for (auto &i: board) { i = NO_PIECE; }
         history[0] = StateInfo();
 
@@ -74,9 +75,6 @@ namespace Chess {
             board[i] = other.board[i];
         }
 
-        checkers = other.checkers;
-        pinned = other.pinned;
-
         hash = other.hash;
         stm = other.stm;
         gamePly = other.gamePly;
@@ -100,18 +98,6 @@ namespace Chess {
         }
 
         std::cout << "Fen: " << getFen() << "\n\n";
-    }
-
-    // prints the game not really in san format, moves are in the form of "e2e4 e7e5 ..."
-    void Board::pgn() {
-        char pieceNotation[] = {'P', 'N', 'B', 'R', 'Q', 'K'};
-
-        std::cout << "PGN:" << std::endl;
-        for (int i = 1; i <= gamePly; ++i) {
-            std::cout << pieceNotation[typeOfPiece(history[i].movedPiece)];
-            std::cout << SQSTR[history[i].move.from()];
-            std::cout << SQSTR[history[i].move.to()] << " ";
-        }
     }
 
     std::string Board::getFen() const {
@@ -193,10 +179,9 @@ namespace Chess {
         return isAttacked(~stm, kingSq, pieces);
     }
 
-    void Board::unmakeMove() {
+    void Board::unmakeMove(const Move& move) {
         stm = ~stm;
 
-        const Move move = history[gamePly].move;
         const MoveFlags mf = move.flags();
         const Square from = move.from();
         const Square to = move.to();

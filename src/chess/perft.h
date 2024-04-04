@@ -85,7 +85,7 @@ namespace Chess {
         for (int i = 0; i < numMoves; ++i) {
             board.makeMove<false>(moves[i]);
             nodes += perft(board, depth - 1);
-            board.unmakeMove();
+            board.unmakeMove(moves[i]);
         }
 
         return nodes;

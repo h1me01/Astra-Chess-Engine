@@ -29,20 +29,15 @@ namespace Chess {
 
     struct StateInfo {
         U64 hash;
-        Piece movedPiece;
-        Move move;
         Piece capturedPiece;
         Square epSquare;
         U64 castleMask;
         int halfMoveClock;
 
-        StateInfo() : hash(0), movedPiece(NO_PIECE), move(NULL_MOVE), capturedPiece(NO_PIECE),
-                      epSquare(NO_SQUARE), castleMask(0), halfMoveClock(0) {}
+        StateInfo() : hash(0), capturedPiece(NO_PIECE), epSquare(NO_SQUARE), castleMask(0), halfMoveClock(0) {}
 
         StateInfo(const StateInfo &prev) {
             hash = prev.hash;
-            movedPiece = prev.movedPiece;
-            move = prev.move;
             capturedPiece = NO_PIECE;
             epSquare = NO_SQUARE;
             castleMask = prev.castleMask;
@@ -53,16 +48,21 @@ namespace Chess {
     class Board {
     public:
         StateInfo history[MAX_PLY * 2];
-        // bitboard of enemy pieces that are currently attacking the king, updated in genLegalMoves()
+        // contains squares of enemy pieces that check our king
         U64 checkers;
-        // bitboard of pieces that are currently pinned to the king by enemy sliders, updated in genLegalMoves()
+        // contains squares of our pieces that are pinned
         U64 pinned;
+        // contains potential danger squares for our king
+        U64 danger;
+        // contains all the possible capture squares
+        U64 captureMask;
+        // contains all the possible squares that are not a capture
+        U64 quietMask;
 
         Board(const std::string &fen);
         Board(const Board &other);
 
         void print(Color c);
-        void pgn();
 
         std::string getFen() const;
         U64 getPieceBB(Color c, PieceType pt) const { return pieceBB[makePiece(c, pt)]; }
@@ -82,8 +82,8 @@ namespace Chess {
         U64 getOrthSliders(Color c) const;
 
         template<bool updateNNUE>
-        void makeMove(Move move);
-        void unmakeMove();
+        void makeMove(const Move& move);
+        void unmakeMove(const Move& move);
 
         void makeNullMove();
         void unmakeNullMove();
@@ -126,7 +126,7 @@ namespace Chess {
      * MAKE MOVE
      */
     template<bool updateNNUE>
-    void Board::makeMove(Move move) {
+    void Board::makeMove(const Move& move) {
         const MoveFlags mf = move.flags();
         const Square from = move.from();
         const Square to = move.to();
@@ -137,8 +137,6 @@ namespace Chess {
 
         gamePly++;
         history[gamePly] = StateInfo(history[gamePly - 1]);
-        history[gamePly].move = move;
-        history[gamePly].movedPiece = pcFrom;
         history[gamePly].halfMoveClock++;
 
         if constexpr (updateNNUE) {

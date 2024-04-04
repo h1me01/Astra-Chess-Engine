@@ -111,7 +111,7 @@ namespace Astra {
             int score = -quiesceSearch(-beta, -alpha);
 
             // undo move and decrease ply
-            board.unmakeMove();
+            board.unmakeMove(move);
             ply--;
 
             // store Transposition Entry
@@ -325,7 +325,7 @@ namespace Astra {
             }
 
             // undo move and decrease ply
-            board.unmakeMove();
+            board.unmakeMove(move);
             ply--;
 
             // check if the search should be stopped

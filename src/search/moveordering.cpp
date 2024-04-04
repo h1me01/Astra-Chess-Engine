@@ -56,7 +56,7 @@ namespace Astra {
             value = pieceValues[capturedPiece] - see(board, ~c, s);
             // do not consider captures if they lose material, therefor max zero
             value = std::max(0, value);
-            board.unmakeMove();
+            board.unmakeMove(move);
         }
 
         return value;
@@ -67,7 +67,7 @@ namespace Astra {
 
         board.makeMove<false>(captureMove);
         int score = pieceValues[to] - see(board, ~board.sideToMove(), captureMove.to());
-        board.unmakeMove();
+        board.unmakeMove(captureMove);
 
         return score;
     }
