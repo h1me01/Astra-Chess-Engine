@@ -49,7 +49,7 @@ namespace Chess {
     }
 
     // helper to generate quiet moves
-    template<MoveFlags MF = QUIET>
+    template<MoveFlags MF>
     inline int make(Move *&moves, Square from, U64 to) {
         int numMoves = 0;
         while (to) {
@@ -59,34 +59,18 @@ namespace Chess {
         return numMoves;
     }
 
-    // helper to generate promotion moves
-    template<>
-    inline int make<PROMOTIONS>(Move *&moves, Square from, U64 to) {
-        int numMoves = 0;
-
-        while (to) {
-            Square s = popLsb(&to);
-            *moves++ = Move(from, s, PR_KNIGHT);
-            *moves++ = Move(from, s, PR_BISHOP);
-            *moves++ = Move(from, s, PR_ROOK);
-            *moves++ = Move(from, s, PR_QUEEN);
-            numMoves += 4;
-        }
-
-        return numMoves;
-    }
-
     // helper to generate promotion capture moves
-    template<>
-    inline int make<PROMOTION_CAPTURES>(Move *&moves, Square from, U64 to) {
+    template<Color Us, Direction d, MoveFlags mf>
+    inline int makePromotions(Move * &moves, U64 to) {
         int numMoves = 0;
 
         while (to) {
             Square s = popLsb(&to);
-            *moves++ = Move(from, s, PC_KNIGHT);
-            *moves++ = Move(from, s, PC_BISHOP);
-            *moves++ = Move(from, s, PC_ROOK);
-            *moves++ = Move(from, s, PC_QUEEN);
+            Square from = s - relativeDir(Us, d);
+            *moves++ = Move(from, s, mf);
+            *moves++ = Move(from, s, MoveFlags(mf + 1));
+            *moves++ = Move(from, s, MoveFlags(mf + 2));
+            *moves++ = Move(from, s, MoveFlags(mf + 3));
             numMoves += 4;
         }
 
@@ -284,7 +268,14 @@ namespace Chess {
                 if (squareRank(s) == relativeRank(Us, RANK_7)) {
                     U64 attacks = pawnAttacks(Us, s) & board.captureMask & LINE[ourKingSq][s];
                     // quiet promotions are impossible since it would leave the king in check
-                    numMoves += make<PROMOTION_CAPTURES>(moves, s, attacks);
+                    while (attacks) {
+                        Square to = popLsb(&attacks);
+                        *moves++ = Move(s, to, PC_KNIGHT);
+                        *moves++ = Move(s, to, PC_BISHOP);
+                        *moves++ = Move(s, to, PC_ROOK);
+                        *moves++ = Move(s, to, PC_QUEEN);
+                        numMoves += 4;
+                    }
                 } else {
                     U64 attacks = pawnAttacks(Us, s) & board.captureMask & LINE[s][ourKingSq];
                     numMoves += make<CAPTURE>(moves, s, attacks);
@@ -348,7 +339,7 @@ namespace Chess {
             numMoves++;
         }
 
-        // pawn captures
+        // captures
         U64 leftCaptures = shift(relativeDir(Us, NORTH_WEST), ourPawns) & board.captureMask;
         while (leftCaptures) {
             s = popLsb(&leftCaptures);
@@ -363,45 +354,22 @@ namespace Chess {
             numMoves++;
         }
 
-        return numMoves;
-    }
-
-    template<Color Us, GenType type>
-    int genPromotionMoves(const Board &board, Move *moves) {
-        int numMoves = 0;
-
-        // contains non-pinned pawns which are on the last rank
-        U64 ourPawns = board.getPieceBB(Us, PAWN) & ~board.pinned & MASK_RANK[relativeRank(Us, RANK_7)];
+        // promotions
+        ourPawns = board.getPieceBB(Us, PAWN) & ~board.pinned & MASK_RANK[relativeRank(Us, RANK_7)];
         if (ourPawns) {
             // attacks contains squares that the pawns can move to
             // quiet promotions
             U64 attacks = shift(relativeDir(Us, NORTH), ourPawns) & board.quietMask;
-            while (attacks && type != CAPTURE_MOVES) {
-                Square s = popLsb(&attacks);
-                for (MoveFlags mf: {PR_KNIGHT, PR_BISHOP, PR_ROOK, PR_QUEEN}) {
-                    *moves++ = Move(s - relativeDir(Us, NORTH), s, mf);
-                }
-                numMoves += 4;
+            if(type != CAPTURE_MOVES) {
+                numMoves += makePromotions<Us, NORTH, PR_KNIGHT>(moves, attacks);
             }
 
             // promotion captures
             attacks = shift(relativeDir(Us, NORTH_WEST), ourPawns) & board.captureMask;
-            while (attacks) {
-                Square s = popLsb(&attacks);
-                for (MoveFlags mf: {PC_KNIGHT, PC_BISHOP, PC_ROOK, PC_QUEEN}) {
-                    *moves++ = Move(s - relativeDir(Us, NORTH_WEST), s, mf);
-                }
-                numMoves += 4;
-            }
+            numMoves += makePromotions<Us, NORTH_WEST, PC_KNIGHT>(moves, attacks);
 
             attacks = shift(relativeDir(Us, NORTH_EAST), ourPawns) & board.captureMask;
-            while (attacks) {
-                Square s = popLsb(&attacks);
-                for (MoveFlags mf: {PC_KNIGHT, PC_BISHOP, PC_ROOK, PC_QUEEN}) {
-                    *moves++ = Move(s - relativeDir(Us, NORTH_EAST), s, mf);
-                }
-                numMoves += 4;
-            }
+            numMoves += makePromotions<Us,NORTH_EAST, PC_KNIGHT>(moves, attacks);
         }
 
         return numMoves;
@@ -480,9 +448,8 @@ namespace Chess {
             }
         }
 
-        numMoves += genPieceMoves<Us, type>(board, moves, occ,  checkersCount);
-        numMoves += genPawnMoves<Us, type>(board, moves, occ,  checkersCount);
-        numMoves += genPromotionMoves<Us, type>(board, moves);
+        numMoves += genPieceMoves<Us, type>(board, moves, occ, checkersCount);
+        numMoves += genPawnMoves<Us, type>(board, moves, occ, checkersCount);
 
         return numMoves;
     }

@@ -113,23 +113,21 @@ namespace Chess {
         RANK_8
     };
 
+    enum {
+        VALUE_DRAW = 0,
+        VALUE_MATE = 32000,
+        VALUE_INFINITE = 32001,
+        VALUE_NONE = 32002,
+    };
+
     enum MoveFlags : int {
         QUIET = 0,
         DOUBLE_PUSH = 1,
         OO = 2, OOO = 3,
         CAPTURE = 4,
         EN_PASSANT = 5,
-        PROMOTIONS = 6,
-        PROMOTION_CAPTURES = 7,
-        PR_KNIGHT = 8, PR_BISHOP = 9, PR_ROOK = 10, PR_QUEEN = 11,
-        PC_KNIGHT = 12, PC_BISHOP = 13, PC_ROOK = 14, PC_QUEEN = 15
-    };
-
-    enum {
-        VALUE_DRAW = 0,
-        VALUE_MATE = 32000,
-        VALUE_INFINITE = 32001,
-        VALUE_NONE = 32002,
+        PR_KNIGHT = 6, PR_BISHOP = 7, PR_ROOK = 8, PR_QUEEN = 9,
+        PC_KNIGHT = 10, PC_BISHOP = 11, PC_ROOK = 12, PC_QUEEN = 13
     };
 
     // max number of ply considered for one game
@@ -157,20 +155,9 @@ namespace Chess {
         }
 
         explicit Move(const std::string& move) {
-            Rank fromRank =  Rank(move[1] - '1');
-            File fromFile =  File(move[0] - 'a');
-            Square from =  Square(fromRank << 3 | fromFile);
-
-            Rank toRank =  Rank(move[3] - '1');
-            File toFile =  File(move[2] - 'a');
-            Square to =  Square(toRank << 3 | toFile);
-
+            Square from =  Square(Rank(move[1] - '1') << 3 | File(move[0] - 'a'));
+            Square to =  Square(Rank(move[3] - '1') << 3 | File(move[2] - 'a'));
             this->move = (from << 6) | to;
-        }
-
-        static bool isSame(const Move& move1, const Move& move2) {
-            uint32_t mask = (1ULL << 24) - 1;
-            return ((move1.move ^ move2.move) & mask) == 0;
         }
 
         Square to() const { return Square(move & 0x3f); }
