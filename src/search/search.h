@@ -26,6 +26,12 @@
 
 namespace Astra {
 
+    enum Node {
+        PV_NODE,
+        ROOT_NODE,
+        NON_PV_NODE
+    };
+
     class Search {
     public:
         explicit Search(Board &board);
@@ -52,8 +58,12 @@ namespace Astra {
 
         void clearData();
 
+        template<Node node>
         int quiesceSearch(int alpha, int beta);
+
+        template<Node node>
         int negamax(int alpha, int beta, int depth);
+
         int aspirationSearch(int depth, int prevEval);
     };
 

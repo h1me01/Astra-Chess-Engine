@@ -19,6 +19,17 @@
 #include "chess/perft.h"
 #include "search/search.h"
 
+const std::string pieceNotation[] = {"P", "N", "B", "R", "Q", "K", ""};
+std::vector<std::string> moveAccumulator;
+
+void printMoves() {
+    for (int i = 0; i < moveAccumulator.size(); ++i) {
+        std::cout << moveAccumulator[i] << " ";
+    }
+
+    std::cout << std::endl;
+}
+
 int main() {
     initLookUpTables();
     zobrist::initZobristKeys();
@@ -28,10 +39,30 @@ int main() {
     // and also the correctness of the move generation
     //testPerft(5);
 
-    Board board("rnbqkbnr/pp1ppppp/2p5/8/2P5/8/PP1PPPPP/RNBQKBNR w KQkq - 0 2");
+    Board board(DEFAULT_FEN);
 
     Astra::Search search(board);
-    search.findBestMove(0);
+    Move bestMove = search.findBestMove(0);
+
+    exit(0);
+
+    while (true) {
+        Astra::Search search(board);
+        Move bestMove = search.findBestMove();
+
+        Piece pc = board.getPiece(bestMove.from());
+        moveAccumulator.push_back(pieceNotation[typeOfPiece(pc)] + SQSTR[bestMove.from()] + SQSTR[bestMove.to()]);
+
+        board.makeMove<true>(bestMove);
+        printMoves();
+
+        Move moves[MAX_MOVES];
+        int numMoves = genLegalMoves(board, moves);
+
+        if (numMoves == 0 || board.isDraw()) {
+            break;
+        }
+    }
 
     return 0;
 }

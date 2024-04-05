@@ -27,9 +27,9 @@ namespace Astra {
 
     enum Bound {
         NO_BOUND,
-        ALL_NODE,
-        CUT_NODE,
-        PV_NODE
+        UPPER_BOUND,
+        LOWER_BOUND,
+        EXACT_BOUND
     };
 
     struct TTEntry {
