@@ -50,9 +50,6 @@ namespace Astra {
             return 0;
         }
 
-        // increase the searched nodes
-        searchedNodes++;
-
         bool pvNode = node == PV_NODE;
 
         // Transposition Table Probing
@@ -76,7 +73,7 @@ namespace Astra {
 
         // Alpha-Beta Pruning
         if (bestScore >= beta) {
-            return beta;
+            return bestScore;
         }
 
         if (bestScore > alpha) {
@@ -89,7 +86,7 @@ namespace Astra {
         // apply move ordering to sort the moves from best to worst
         moveOrdering.sortMoves<QSEARCH>(board, moves, numMoves, entry.move, ply);
 
-        Move bestMove;
+        Move bestMove = NULL_MOVE;
         for (int i = 0; i < numMoves; ++i) {
             Move move = moves[i];
 
@@ -104,6 +101,9 @@ namespace Astra {
             if (!isPromotion(move) && !inCheck && bestScore + DELTA_MARGIN + captureValue < alpha && board.nonPawnMaterial(stm)) {
                 continue;
             }
+
+            // increase the searched nodes
+            searchedNodes++;
 
             // make move and increase ply
             board.makeMove<true>(move);
@@ -151,16 +151,13 @@ namespace Astra {
         bool rootNode = node == ROOT_NODE;
         bool pvNode = node == PV_NODE;
         bool inCheck = board.inCheck();
-        int bestScore = -VALUE_MATE;
+        int bestScore = -VALUE_INFINITE;
 
         // set local pv length to 0
         pvTable(ply).length = 0;
 
         // if we reached the maximum depth, do quiescence search
         if (depth <= 0) {
-            // increase the searched nodes
-            searchedNodes++;
-
             // do a quiescence search
             return quiesceSearch<node>(alpha, beta);
         }
@@ -182,11 +179,6 @@ namespace Astra {
             if (alpha >= beta) {
                 return alpha;
             }
-        }
-
-        // Check Extension
-        if (inCheck) {
-            depth++;
         }
 
         int staticEval;
@@ -218,7 +210,7 @@ namespace Astra {
 
             // Null Move Pruning
             if (board.nonPawnMaterial(board.sideToMove()) && depth >= 3 && staticEval >= beta) {
-                int R = 5 + std::min(4, depth / 5) + std::min(3, (staticEval - beta) / 214);
+                int R = 4;
 
                 board.makeNullMove();
                 score = -negamax<NON_PV_NODE>(-beta, -beta + 1, depth - R);
@@ -294,6 +286,9 @@ namespace Astra {
                 depth++;
             }
 
+            // increase the searched nodes
+            searchedNodes++;
+
             // make move and increase ply
             board.makeMove<true>(move);
             ply++;
@@ -306,7 +301,7 @@ namespace Astra {
                 score = -negamax<NON_PV_NODE>(-beta, -alpha, depth - 1);
             } else {
                 // Late Move Reduction (LMR)
-                if (!pvNode && i >= 4 && ply > 3 && !board.inCheck() && !inCheck && !moveIsCapture && !moveIsPromotion) {
+                if (!pvNode && i >= 4 && depth >= 3 && !inCheck) {
                     score = -negamax<NON_PV_NODE>(-beta, -alpha, depth - 2);
 
                     // if the score is greater than alpha, do a full-depth search

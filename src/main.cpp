@@ -41,11 +41,6 @@ int main() {
 
     Board board(DEFAULT_FEN);
 
-    Astra::Search search(board);
-    Move bestMove = search.findBestMove(0);
-
-    exit(0);
-
     while (true) {
         Astra::Search search(board);
         Move bestMove = search.findBestMove();
