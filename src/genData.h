@@ -79,7 +79,7 @@ std::vector<NetInput> fenToInput(const std::vector<Dataset> &_dataset) {
 
     for (const auto &i: _dataset) {
         NetInput input;
-        input.target = i.eval;
+        input.target = i.evaluate;
 
         Board board(i.fen);
 

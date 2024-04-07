@@ -23,6 +23,7 @@
 #include "pvtable.h"
 #include "tt.h"
 #include "moveordering.h"
+#include "eval.h"
 
 namespace Astra {
 

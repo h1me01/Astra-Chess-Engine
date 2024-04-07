@@ -32,11 +32,9 @@ namespace Chess {
             } else if (ch == '/') {
                 square -= 16;
             } else {
-                putPiece<false>(Piece(PIECE_STR.find(ch)), Square(square++));
+                putPiece(Piece(PIECE_STR.find(ch)), Square(square++));
             }
         }
-
-        refreshNNUE(getAccumulator());
 
         std::istringstream ss(fen.substr(fen.find(' ')));
         char token;
@@ -63,30 +61,6 @@ namespace Chess {
                     break;
             }
         }
-
-        accumulators->clear();
-    }
-
-    Board::Board(const Board &other) {
-        if (other.accumulators) {
-            accumulators = std::make_unique<Accumulators>(*other.accumulators);
-        }
-
-        for (int i = 0; i < MAX_PLY * 2; ++i) {
-            history[i] = other.history[i];
-        }
-
-        for (int i = 0; i < NUM_PIECES; ++i) {
-            pieceBB[i] = other.pieceBB[i];
-        }
-
-        for (int i = 0; i < NUM_SQUARES; ++i) {
-            board[i] = other.board[i];
-        }
-
-        hash = other.hash;
-        stm = other.stm;
-        gamePly = other.gamePly;
     }
 
     void Board::print(Color c) {
@@ -190,6 +164,68 @@ namespace Chess {
         return isAttacked(~stm, kingSq, pieces);
     }
 
+    void Board::makeMove(const Move &move) {
+        const MoveFlags mf = move.flags();
+        const Square from = move.from();
+        const Square to = move.to();
+        const Piece pcFrom = board[from];
+        const Piece pcTo = board[to];
+        const PieceType pt = typeOfPiece(pcFrom);
+        const U64 mask = SQUARE_BB[from] | SQUARE_BB[to];
+
+        gamePly++;
+        history[gamePly] = StateInfo(history[gamePly - 1]);
+        history[gamePly].castleMask |= mask;
+        history[gamePly].halfMoveClock++;
+
+        if (pt == PAWN || pcTo != NO_PIECE) {
+            history[gamePly].halfMoveClock = 0;
+        }
+
+        if (mf == QUIET || mf == DOUBLE_PUSH || mf == EN_PASSANT) {
+            movePiece(from, to);
+
+            if (mf == DOUBLE_PUSH) {
+                history[gamePly].epSquare = Square(to ^ 8);
+            } else if (mf == EN_PASSANT) {
+                removePiece(Square(to ^ 8));
+            }
+        } else if (mf == OO || mf == OOO) {
+            Square rookFrom, rookTo;
+
+            if (mf == OO) {
+                rookFrom = stm == WHITE ? h1 : h8;
+                rookTo = stm == WHITE ? f1 : f8;
+            } else {
+                rookFrom = stm == WHITE ? a1 : a8;
+                rookTo = stm == WHITE ? d1 : d8;
+            }
+
+            movePiece(from, to);
+            movePiece(rookFrom, rookTo);
+        } else if (mf >= PR_KNIGHT && mf <= PC_QUEEN) {
+            removePiece(from);
+
+            if (mf >= PC_KNIGHT) {
+                history[gamePly].capturedPiece = pcTo;
+                removePiece(to);
+            }
+
+            putPiece(makePiece(stm, typeOfPromotion(mf)), to);
+        } else if (mf == CAPTURE) {
+            history[gamePly].capturedPiece = pcTo;
+            hash ^= zobrist::zobristTable[pcFrom][from] ^ zobrist::zobristTable[pcFrom][to]
+                    ^ zobrist::zobristTable[pcTo][to];
+            pieceBB[pcFrom] ^= mask;
+            pieceBB[pcTo] &= ~mask;
+            board[to] = pcFrom;
+            board[from] = NO_PIECE;
+        }
+
+        history[gamePly].hash = hash;
+        stm = ~stm;
+    }
+
     void Board::unmakeMove(const Move &move) {
         stm = ~stm;
 
@@ -197,15 +233,11 @@ namespace Chess {
         const Square from = move.from();
         const Square to = move.to();
 
-        if (accumulators->size()) {
-            accumulators->pop();
-        }
-
         if (mf == QUIET || mf == DOUBLE_PUSH || mf == EN_PASSANT) {
-            movePiece<false>(to, from);
+            movePiece(to, from);
 
             if (mf == EN_PASSANT) {
-                putPiece<false>(makePiece(~stm, PAWN), Square(to ^ 8));
+                putPiece(makePiece(~stm, PAWN), Square(to ^ 8));
             }
         } else if (mf == OO|| mf == OOO) {
             Square rookFrom, rookTo;
@@ -218,18 +250,18 @@ namespace Chess {
                 rookTo = stm == WHITE ? a1 : a8;
             }
 
-            movePiece<false>(to , from);
-            movePiece<false>(rookFrom, rookTo);
+            movePiece(to , from);
+            movePiece(rookFrom, rookTo);
         } else if (mf >= PR_KNIGHT && mf <= PC_QUEEN) {
-            removePiece<false>(to);
-            putPiece<false>(makePiece(stm, PAWN), from);
+            removePiece(to);
+            putPiece(makePiece(stm, PAWN), from);
 
             if (mf >= PC_KNIGHT) {
-                putPiece<false>(history[gamePly].capturedPiece, to);
+                putPiece(history[gamePly].capturedPiece, to);
             }
         } else if (mf == CAPTURE) {
-            movePiece<false>(to, from);
-            putPiece<false>(history[gamePly].capturedPiece, to);
+            movePiece(to, from);
+            putPiece(history[gamePly].capturedPiece, to);
         }
 
         gamePly--;
@@ -278,24 +310,30 @@ namespace Chess {
     /*
      * PRIVATE FUNCTIONS
      */
-    void Board::refreshNNUE(NNUE::accumulator &acc) const {
-        for (int i = 0; i < N_HIDDEN_SIZE; i++) {
-            acc[WHITE][i] = HIDDEN_BIAS[i];
-            acc[BLACK][i] = HIDDEN_BIAS[i];
-        }
+    // puts a piece on the board and updates the hash and pieces bitboards
+    void Board::putPiece(Piece pc, Square s) {
+        board[s] = pc;
+        pieceBB[pc] |= SQUARE_BB[s];
+        hash ^= zobrist::zobristTable[pc][s];
+    }
 
-        const Square ksq_white = kingSquare(WHITE);
-        const Square ksq_black = kingSquare(BLACK);
+    // removes a piece from the board and updates the hash and pieces bitboards
+    void Board::removePiece(Square s) {
+        Piece pc = board[s];
 
-        for (Square i = a1; i < NUM_SQUARES; ++i) {
-            Piece p = board[i];
+        hash ^= zobrist::zobristTable[pc][s];
+        pieceBB[pc] &= ~SQUARE_BB[s];
+        board[s] = NO_PIECE;
+    }
 
-            if (p == NO_PIECE) {
-                continue;
-            }
+    // moves a piece on the board and updates the hash and pieces bitboards
+    void Board::movePiece(Square from, Square to) {
+        Piece pc = board[from];
 
-            NNUE::activate(acc, i, p, ksq_white, ksq_black);
-        }
+        hash ^= zobrist::zobristTable[pc][from] ^ zobrist::zobristTable[pc][to];
+        pieceBB[pc] ^= (SQUARE_BB[from] | SQUARE_BB[to]);
+        board[to] = pc;
+        board[from] = NO_PIECE;
     }
 
 } // namespace Chess

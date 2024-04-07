@@ -52,7 +52,7 @@ namespace Astra {
             PieceType capturedPiece = typeOfPiece(board.getPiece(s));
             Move move = Move(attackerFrom, s, CAPTURE);
 
-            board.makeMove<false>(move);
+            board.makeMove(move);
             value = pieceValues[capturedPiece] - see(board, ~c, s);
             // do not consider captures if they lose material, therefor max zero
             value = std::max(0, value);
@@ -67,7 +67,7 @@ namespace Astra {
 
         PieceType to = typeOfPiece(board.getPiece(captureMove.to()));
 
-        board.makeMove<false>(captureMove);
+        board.makeMove(captureMove);
         int score = pieceValues[to] - see(board, ~board.sideToMove(), captureMove.to());
         board.unmakeMove(captureMove);
 

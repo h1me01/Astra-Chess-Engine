@@ -18,7 +18,6 @@
 
 #include "search.h"
 #include "../chess/movegen.h"
-#include "../eval/evaluate.h"
 
 namespace Astra {
 
@@ -106,7 +105,7 @@ namespace Astra {
             searchedNodes++;
 
             // make move and increase ply
-            board.makeMove<true>(move);
+            board.makeMove(move);
             ply++;
 
             int score = -quiesceSearch<node>(-beta, -alpha);
@@ -290,7 +289,7 @@ namespace Astra {
             searchedNodes++;
 
             // make move and increase ply
-            board.makeMove<true>(move);
+            board.makeMove(move);
             ply++;
 
             // score of the current move
@@ -344,8 +343,7 @@ namespace Astra {
                     // Beta Cut-off
                     if (score >= beta) {
                         // store Transposition Entry as lower bound
-                        int ttDepth = std::max(depth, 0);
-                        tt.store(hash, bestMove, score, ttDepth, LOWER_BOUND);
+                        tt.store(hash, bestMove, score, std::max(depth, 0), LOWER_BOUND);
 
                         // update History and Killer Moves (if not a capture)
                         if (!moveIsCapture) {
@@ -357,7 +355,6 @@ namespace Astra {
                     }
                 }
             }
-
         }
 
         // check for mate and stalemate or draw
@@ -435,11 +432,11 @@ namespace Astra {
             // do search
             int score = aspirationSearch(depth, prevEval);
 
-            // DEBUG: print info
-            std::cout << "info depth: " << depth
-                      << " pv: " << pvTable(0)(0)
-                      << " score: " << score
-                      << " nodes: " << searchedNodes << std::endl;
+            // DEBUG: print search info
+            std::cout << "info depth " << depth
+                      << " nodes " << searchedNodes
+                      << " score cp " << score
+                      << " pv " << pvTable(0)(0) << std::endl;
 
             // check if the search should be stopped
             if (timeManager.isTimeExceeded() && timePerMove != 0) {
@@ -469,6 +466,7 @@ namespace Astra {
 
         std::cout << std::endl;
     }
+
 
 
 } // namespace Astra

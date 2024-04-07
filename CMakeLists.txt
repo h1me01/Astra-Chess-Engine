@@ -23,10 +23,6 @@ add_executable(Astra_Chess_Engine
         src/search/pvTable.h
         src/search/timemanager.h
         src/genData.h
-        src/eval/nnue.cpp
-        src/eval/nnue.h
-        src/incbin/incbin.h
-        src/eval/accumulators.h
-        src/eval/evaluate.h
+        src/search/eval.h
 
 )

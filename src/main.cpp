@@ -33,7 +33,7 @@ void printMoves() {
 int main() {
     initLookUpTables();
     zobrist::initZobristKeys();
-    NNUE::init("");
+    Eval::initEval();
 
     // test the performance of the move generation
     // and also the correctness of the move generation
@@ -41,15 +41,14 @@ int main() {
 
     Board board(DEFAULT_FEN);
 
-    while (true) {
+    while(true) {
         Astra::Search search(board);
         Move bestMove = search.findBestMove();
 
         Piece pc = board.getPiece(bestMove.from());
         moveAccumulator.push_back(pieceNotation[typeOfPiece(pc)] + SQSTR[bestMove.from()] + SQSTR[bestMove.to()]);
 
-        board.makeMove<true>(bestMove);
-        printMoves();
+        board.makeMove(bestMove);
 
         Move moves[MAX_MOVES];
         int numMoves = genLegalMoves(board, moves);
@@ -58,6 +57,8 @@ int main() {
             break;
         }
     }
+
+    printMoves();
 
     return 0;
 }
