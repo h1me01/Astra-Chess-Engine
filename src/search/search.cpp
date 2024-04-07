@@ -79,16 +79,14 @@ namespace Astra {
             alpha = bestScore;
         }
 
-        Move moves[MAX_CAPTURE_MOVES];
-        int numMoves = genLegalMoves<CAPTURE_MOVES>(board, moves);
+        MoveList moves(board);
 
         // apply move ordering to sort the moves from best to worst
-        moveOrdering.sortMoves<QSEARCH>(board, moves, numMoves, entry.move, ply);
+        moveOrdering.sortMoves<QSEARCH>(board, moves, entry.move, ply);
 
         Move bestMove = NULL_MOVE;
-        for (int i = 0; i < numMoves; ++i) {
-            Move move = moves[i];
 
+        for (Move move: moves) {
             // Static Exchange Evaluation (SEE)
             if (!inCheck && seeCapture(board, move) < 0) {
                 continue;
@@ -247,18 +245,17 @@ namespace Astra {
         }
 
         // generate all legal moves
-        Move moves[MAX_MOVES];
-        int numMoves = genLegalMoves(board, moves);
+        MoveList moves(board);
 
         // apply move ordering to sort the moves from best to worst
-        moveOrdering.sortMoves<NEGAMAX>(board, moves, numMoves, entry.move, ply);
+        moveOrdering.sortMoves<NEGAMAX>(board, moves, entry.move, ply);
 
         int quietMoveCount = 0;
 
         Move bestMove;
-        for (int i = 0; i < numMoves; ++i) {
-            Move move = moves[i];
 
+        int moveCount = 0;
+        for (Move move: moves) {
             bool moveIsCapture = isCapture(move);
             bool moveIsPromotion = isPromotion(move);
 
@@ -281,7 +278,7 @@ namespace Astra {
             }
 
             // One Reply Extension
-            if (inCheck && numMoves == 1) {
+            if (inCheck && moves.size() == 1) {
                 depth++;
             }
 
@@ -296,11 +293,11 @@ namespace Astra {
             int score;
 
             // full-depth search for the first move
-            if (i == 0) {
+            if (moveCount == 0) {
                 score = -negamax<NON_PV_NODE>(-beta, -alpha, depth - 1);
             } else {
                 // Late Move Reduction (LMR)
-                if (!pvNode && i >= 4 && depth >= 3 && !inCheck) {
+                if (!pvNode && moveCount >= 4 && depth >= 3 && !inCheck) {
                     score = -negamax<NON_PV_NODE>(-beta, -alpha, depth - 2);
 
                     // if the score is greater than alpha, do a full-depth search
@@ -355,10 +352,13 @@ namespace Astra {
                     }
                 }
             }
+
+            // increase move count
+            moveCount++;
         }
 
         // check for mate and stalemate or draw
-        if (numMoves == 0) {
+        if (moves.size() == 0) {
             return board.inCheck() ? ply - VALUE_MATE : VALUE_DRAW;
         } else if (board.isDraw()) {
             return VALUE_DRAW;
@@ -466,7 +466,6 @@ namespace Astra {
 
         std::cout << std::endl;
     }
-
 
 
 } // namespace Astra

@@ -75,17 +75,16 @@ namespace Chess {
     U64 perft(Board &board, int depth) {
         U64 nodes = 0;
 
-        Move moves[MAX_MOVES];
-        int numMoves = genLegalMoves(board, moves);
+        MoveList moves(board);
 
         if (depth == 1) {
-            return (U64) numMoves;
+            return (U64) moves.size();
         }
 
-        for (int i = 0; i < numMoves; ++i) {
-            board.makeMove(moves[i]);
+        for (Move move : moves) {
+            board.makeMove(move);
             nodes += perft(board, depth - 1);
-            board.unmakeMove(moves[i]);
+            board.unmakeMove(move);
         }
 
         return nodes;

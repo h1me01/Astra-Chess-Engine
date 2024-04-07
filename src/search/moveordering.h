@@ -20,6 +20,7 @@
 #define ASTRA_MOVEORDERING_H
 
 #include "../chess/board.h"
+#include "../chess/movegen.h"
 
 using namespace Chess;
 
@@ -65,7 +66,7 @@ namespace Astra {
         void updateKiller(Move &move, int ply);
 
         template<SearchType searchType>
-        void sortMoves(Board &board, Move *moves, int numMoves, Move& ttMove, int ply);
+        void sortMoves(Board &board, MoveList &moves, Move& ttMove, int ply);
 
     private:
         Move killer1[MAX_PLY];
@@ -75,31 +76,32 @@ namespace Astra {
     };
 
     template<SearchType searchType>
-    inline void MoveOrdering::sortMoves(Board &board, Move *moves, int numMoves, Move& ttMove, int ply) {
-        std::vector<int> scores(numMoves, 0);
+    inline void MoveOrdering::sortMoves(Board &board, MoveList &moves, Move& ttMove, int ply) {
+        std::vector<int> scores(moves.size(), 0);
 
-        for (int i = 0; i < numMoves; ++i) {
-            Move move = moves[i];
-
+        int moveCount = 0;
+        for (Move move : moves) {
             if (ttMove != NULL_MOVE && move == ttMove) {
-                scores[i] = TT_SCORE;
+                scores[moveCount] = TT_SCORE;
             } else if constexpr (searchType == QSEARCH) {
-                scores[i] = CAPTURE_SCORE + mvvlva(board, move);
+                scores[moveCount] = CAPTURE_SCORE + mvvlva(board, move);
             } else if (isCapture(move)) {
                 int seeScore = seeCapture(board, move);
-                scores[i] = seeScore >= 0 ? CAPTURE_SCORE + mvvlva(board, move) : mvvlva(board, move);
+                scores[moveCount] = seeScore >= 0 ? CAPTURE_SCORE + mvvlva(board, move) : mvvlva(board, move);
             } else if (move == killer1[ply]) {
-                scores[i] = KILLER_ONE_SCORE;
+                scores[moveCount] = KILLER_ONE_SCORE;
             } else if (move == killer2[ply]) {
-                scores[i] = KILLER_TWO_SCORE;
+                scores[moveCount] = KILLER_TWO_SCORE;
             } else {
-                scores[i] = getHistoryScore(board, move);
+                scores[moveCount] = getHistoryScore(board, move);
             }
+
+            moveCount++;
         }
 
         // Bubble Sort
-        for (int i = 0; i < numMoves - 1; ++i) {
-            for (int j = 0; j < numMoves - i - 1; ++j) {
+        for (int i = 0; i < moves.size() - 1; ++i) {
+            for (int j = 0; j < moves.size() - i - 1; ++j) {
                 if (scores[j] < scores[j + 1]) {
                     std::swap(moves[j], moves[j + 1]);
                     std::swap(scores[j], scores[j + 1]);

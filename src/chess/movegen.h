@@ -23,11 +23,6 @@
 
 namespace Chess {
 
-    enum GenType {
-        ALL_MOVES,
-        CAPTURE_MOVES
-    };
-
     constexpr U64 shortCastlingMask(Color c) {
         return c == WHITE ? WHITE_OO_MASK : BLACK_OO_MASK;
     }
@@ -50,20 +45,16 @@ namespace Chess {
 
     // helper to generate quiet moves
     template<MoveFlags MF>
-    inline int make(Move *&moves, Square from, U64 to) {
-        int numMoves = 0;
+    inline Move *make(Move *&moves, Square from, U64 to) {
         while (to) {
             *moves++ = Move(from, popLsb(&to), MF);
-            numMoves++;
         }
-        return numMoves;
+        return moves;
     }
 
     // helper to generate promotion capture moves
     template<Color Us, Direction d, MoveFlags mf>
-    inline int makePromotions(Move * &moves, U64 to) {
-        int numMoves = 0;
-
+    inline Move *makePromotions(Move *&moves, U64 to) {
         while (to) {
             Square s = popLsb(&to);
             Square from = s - relativeDir(Us, d);
@@ -71,10 +62,9 @@ namespace Chess {
             *moves++ = Move(from, s, MoveFlags(mf + 1));
             *moves++ = Move(from, s, MoveFlags(mf + 2));
             *moves++ = Move(from, s, MoveFlags(mf + 3));
-            numMoves += 4;
         }
 
-        return numMoves;
+        return moves;
     }
 
     template<Color Us>
@@ -156,8 +146,7 @@ namespace Chess {
     }
 
     template<Color Us>
-    int genCastlingMoves(const Board &board, Move *&moves, U64 occ) {
-        int numMoves = 0;
+    Move *genCastlingMoves(const Board &board, Move *&moves, U64 occ) {
         const U64 castleMask = board.history[board.getPly()].castleMask;
 
         // checks if king would be in check if it moved to the castling square
@@ -167,7 +156,6 @@ namespace Chess {
 
         if (!(possibleChecks | isAllowed)) {
             *moves++ = Us == WHITE ? Move(e1, g1, OO) : Move(e8, g8, OO);
-            numMoves++;
         }
 
         // ignoreLongCastlingDanger is used to get rid of the danger on the possibleChecks or b8 square
@@ -176,16 +164,13 @@ namespace Chess {
 
         if (!(possibleChecks | isAllowed)) {
             *moves++ = Us == WHITE ? Move(e1, c1, OOO) : Move(e8, c8, OOO);
-            numMoves++;
         }
 
-        return numMoves;
+        return moves;
     }
 
-    template<Color Us, GenType type>
-    int genPieceMoves(const Board &board, Move *&moves, U64 occ, int checkersCount) {
-        int numMoves = 0;
-
+    template<Color Us>
+    Move *genPieceMoves(const Board &board, Move *&moves, U64 occ, int checkersCount) {
         // used to store square
         Square s;
         // used to store piece attack squares;
@@ -202,10 +187,8 @@ namespace Chess {
                 // only include getAttacks that are aligned with our king
                 attacks = getAttacks(typeOfPiece(board.getPiece(s)), s, occ) & LINE[ourKingSq][s];
 
-                numMoves += make<CAPTURE>(moves, s, attacks & board.captureMask);
-                if (type != CAPTURE_MOVES) {
-                    numMoves += make<QUIET>(moves, s, attacks & board.quietMask);
-                }
+                moves = make<CAPTURE>(moves, s, attacks & board.captureMask);
+                moves = make<QUIET>(moves, s, attacks & board.quietMask);
             }
         }
 
@@ -215,10 +198,8 @@ namespace Chess {
             s = popLsb(&ourKnights);
             attacks = getAttacks(KNIGHT, s, occ);
 
-            numMoves += make<CAPTURE>(moves, s, attacks & board.captureMask);
-            if (type != CAPTURE_MOVES) {
-                numMoves += make<QUIET>(moves, s, attacks & board.quietMask);
-            }
+            moves = make<CAPTURE>(moves, s, attacks & board.captureMask);
+            moves = make<QUIET>(moves, s, attacks & board.quietMask);
         }
 
         // bishops and queens
@@ -227,10 +208,8 @@ namespace Chess {
             s = popLsb(&ourDiagSliders);
             attacks = getAttacks(BISHOP, s, occ);
 
-            numMoves += make<CAPTURE>(moves, s, attacks & board.captureMask);
-            if (type != CAPTURE_MOVES) {
-                numMoves += make<QUIET>(moves, s, attacks & board.quietMask);
-            }
+            moves = make<CAPTURE>(moves, s, attacks & board.captureMask);
+            moves = make<QUIET>(moves, s, attacks & board.quietMask);
         }
 
         // rooks and queens
@@ -239,18 +218,15 @@ namespace Chess {
             s = popLsb(&ourOrthSliders);
             attacks = getAttacks(ROOK, s, occ);
 
-            numMoves += make<CAPTURE>(moves, s, attacks & board.captureMask);
-            if (type != CAPTURE_MOVES) {
-                numMoves += make<QUIET>(moves, s, attacks & board.quietMask);
-            }
+            moves = make<CAPTURE>(moves, s, attacks & board.captureMask);
+            moves = make<QUIET>(moves, s, attacks & board.quietMask);
         }
 
-        return numMoves;
+        return moves;
     }
 
-    template<Color Us, GenType type>
-    int genPawnMoves(const Board &board, Move *&moves, U64 occ, int checkersCount) {
-        int numMoves = 0;
+    template<Color Us>
+    Move *genPawnMoves(const Board &board, Move *&moves, U64 occ, int checkersCount) {
         constexpr Color them = ~Us;
         const Square epSq = board.history[board.getPly()].epSquare;
         const Square ourKingSq = board.kingSquare(Us);
@@ -274,19 +250,16 @@ namespace Chess {
                         *moves++ = Move(s, to, PC_BISHOP);
                         *moves++ = Move(s, to, PC_ROOK);
                         *moves++ = Move(s, to, PC_QUEEN);
-                        numMoves += 4;
                     }
                 } else {
                     U64 attacks = pawnAttacks(Us, s) & board.captureMask & LINE[s][ourKingSq];
-                    numMoves += make<CAPTURE>(moves, s, attacks);
+                    moves = make<CAPTURE>(moves, s, attacks);
 
-                    if (type != CAPTURE_MOVES) {
-                        U64 singlePush = shift(relativeDir(Us, NORTH), SQUARE_BB[s]) & ~occ & LINE[ourKingSq][s];
-                        numMoves += make<QUIET>(moves, s, singlePush);
+                    U64 singlePush = shift(relativeDir(Us, NORTH), SQUARE_BB[s]) & ~occ & LINE[ourKingSq][s];
+                    moves = make<QUIET>(moves, s, singlePush);
 
-                        U64 doublePush = shift(relativeDir(Us, NORTH), singlePush & MASK_RANK[relativeRank(Us, RANK_3)]);
-                        numMoves += make<DOUBLE_PUSH>(moves, s, doublePush & ~occ & LINE[ourKingSq][s]);
-                    }
+                    U64 doublePush = shift(relativeDir(Us, NORTH), singlePush & MASK_RANK[relativeRank(Us, RANK_3)]);
+                    moves = make<DOUBLE_PUSH>(moves, s, doublePush & ~occ & LINE[ourKingSq][s]);
                 }
             }
 
@@ -305,7 +278,6 @@ namespace Chess {
 
                     if ((attacker & theirOrthSliders) == 0) {
                         *moves++ = Move(s, epSq, EN_PASSANT);
-                        numMoves++;
                     }
                 }
 
@@ -313,7 +285,6 @@ namespace Chess {
                 canCapture = epCaptureBB & board.pinned & LINE[epSq][ourKingSq];
                 if (canCapture) {
                     *moves++ = Move(bsf(canCapture), epSq, EN_PASSANT);
-                    numMoves++;
                 }
             }
         }
@@ -327,16 +298,14 @@ namespace Chess {
         // quiet mask is applied later, to consider the possibility of a double push blocking a check
         singlePush &= board.quietMask;
 
-        while (singlePush && type != CAPTURE_MOVES) {
+        while (singlePush) {
             s = popLsb(&singlePush);
             *moves++ = Move(s - relativeDir(Us, NORTH), s, QUIET);
-            numMoves++;
         }
 
-        while (doublePush && type != CAPTURE_MOVES) {
+        while (doublePush) {
             s = popLsb(&doublePush);
             *moves++ = Move(s - relativeDir(Us, NORTH_NORTH), s, DOUBLE_PUSH);
-            numMoves++;
         }
 
         // captures
@@ -344,14 +313,12 @@ namespace Chess {
         while (leftCaptures) {
             s = popLsb(&leftCaptures);
             *moves++ = Move(s - relativeDir(Us, NORTH_WEST), s, CAPTURE);
-            numMoves++;
         }
 
         U64 rightCaptures = shift(relativeDir(Us, NORTH_EAST), ourPawns) & board.captureMask;
         while (rightCaptures) {
             s = popLsb(&rightCaptures);
             *moves++ = Move(s - relativeDir(Us, NORTH_EAST), s, CAPTURE);
-            numMoves++;
         }
 
         // promotions
@@ -360,24 +327,21 @@ namespace Chess {
             // attacks contains squares that the pawns can move to
             // quiet promotions
             U64 attacks = shift(relativeDir(Us, NORTH), ourPawns) & board.quietMask;
-            if(type != CAPTURE_MOVES) {
-                numMoves += makePromotions<Us, NORTH, PR_KNIGHT>(moves, attacks);
-            }
+            moves = makePromotions<Us, NORTH, PR_KNIGHT>(moves, attacks);
 
             // promotion captures
             attacks = shift(relativeDir(Us, NORTH_WEST), ourPawns) & board.captureMask;
-            numMoves += makePromotions<Us, NORTH_WEST, PC_KNIGHT>(moves, attacks);
+            moves = makePromotions<Us, NORTH_WEST, PC_KNIGHT>(moves, attacks);
 
             attacks = shift(relativeDir(Us, NORTH_EAST), ourPawns) & board.captureMask;
-            numMoves += makePromotions<Us,NORTH_EAST, PC_KNIGHT>(moves, attacks);
+            moves = makePromotions<Us, NORTH_EAST, PC_KNIGHT>(moves, attacks);
         }
 
-        return numMoves;
+        return moves;
     }
 
-    template<Color Us, GenType type>
-    int genLegalMoves(Board &board, Move *moves) {
-        int numMoves = 0;
+    template<Color Us>
+    Move *genLegalMoves(Board &board, Move *moves) {
         const Color them = ~Us;
         const Square epSq = board.history[board.getPly()].epSquare;
         const Square ourKingSq = board.kingSquare(Us);
@@ -391,15 +355,13 @@ namespace Chess {
         // generate king moves
         U64 attacks = getAttacks(KING, ourKingSq, occ) & ~(ourOcc | board.danger);
 
-        numMoves += make<CAPTURE>(moves, ourKingSq, attacks & theirOcc);
-        if (type != CAPTURE_MOVES) {
-            numMoves += make<QUIET>(moves, ourKingSq, attacks & ~theirOcc);
-        }
+        moves = make<CAPTURE>(moves, ourKingSq, attacks & theirOcc);
+        moves = make<QUIET>(moves, ourKingSq, attacks & ~theirOcc);
 
         // if double check, then only king moves are legal
         int checkersCount = sparsePopCount(board.checkers);
         if (checkersCount == 2) {
-            return numMoves;
+            return moves;
         }
 
         // single check
@@ -418,7 +380,6 @@ namespace Chess {
                     canCapture = pawnAttacks(them, epSq) & ourPawns & ~board.pinned;
                     while (canCapture) {
                         *moves++ = Move(popLsb(&canCapture), epSq, EN_PASSANT);
-                        numMoves++;
                     }
                 }
             }
@@ -428,9 +389,8 @@ namespace Chess {
                 canCapture = board.isAttacked(Us, checkerSquare, occ) & ~board.pinned;
                 while (canCapture) {
                     *moves++ = Move(popLsb(&canCapture), checkerSquare, CAPTURE);
-                    numMoves++;
                 }
-                return numMoves;
+                return moves;
             }
 
             // we must capture the checking piece
@@ -443,23 +403,39 @@ namespace Chess {
             // we can move to any square which is not occupied
             board.quietMask = ~occ;
 
-            if (type != CAPTURE_MOVES) {
-                numMoves += genCastlingMoves<Us>(board, moves, occ);
+            moves = genCastlingMoves<Us>(board, moves, occ);
+        }
+
+        moves = genPieceMoves<Us>(board, moves, occ, checkersCount);
+        moves = genPawnMoves<Us>(board, moves, occ, checkersCount);
+
+        return moves;
+    }
+
+    class MoveList {
+    public:
+        explicit MoveList(Board &board) {
+            Color stm = board.sideToMove();
+
+            if (stm == WHITE) {
+                last = genLegalMoves<WHITE>(board, list);
+            } else {
+                last = genLegalMoves<BLACK>(board, list);
             }
         }
 
-        numMoves += genPieceMoves<Us, type>(board, moves, occ, checkersCount);
-        numMoves += genPawnMoves<Us, type>(board, moves, occ, checkersCount);
+        constexpr Move &operator[](int i) { return list[i]; }
 
-        return numMoves;
-    }
+        const Move *begin() const { return list; }
 
-    template<GenType type = ALL_MOVES>
-    int genLegalMoves(Board &board, Move *moves) {
-        return board.sideToMove() == WHITE ?
-               genLegalMoves<WHITE, type>(board, moves) :
-               genLegalMoves<BLACK, type>(board, moves);
-    }
+        const Move *end() const { return last; }
+
+        size_t size() const { return last - list; }
+
+    private:
+        Move list[MAX_MOVES];
+        Move *last;
+    };
 
 } // namespace Chess
 

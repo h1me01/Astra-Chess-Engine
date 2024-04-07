@@ -50,10 +50,9 @@ int main() {
 
         board.makeMove(bestMove);
 
-        Move moves[MAX_MOVES];
-        int numMoves = genLegalMoves(board, moves);
+        MoveList moves(board);
 
-        if (numMoves == 0 || board.isDraw()) {
+        if (moves.size() == 0 || board.isDraw()) {
             break;
         }
     }

@@ -136,9 +136,6 @@ namespace Chess {
     // max number of possible legal moves in chess are 218
     const int MAX_MOVES = 128;
 
-    // max number of possible legal captures in chess are 74
-    const int MAX_CAPTURE_MOVES = 28;
-
     class Move {
     public:
         // default null move (a1a1)
