@@ -65,7 +65,6 @@ namespace Astra {
         void updateHistory(Board &board, Move &move, int score);
         void updateKiller(Move &move, int ply);
 
-        template<SearchType searchType>
         void sortMoves(Board &board, MoveList &moves, Move& ttMove, int ply);
 
     private:
@@ -74,41 +73,6 @@ namespace Astra {
 
         int history[NUM_COLORS][NUM_SQUARES][NUM_SQUARES]{};
     };
-
-    template<SearchType searchType>
-    inline void MoveOrdering::sortMoves(Board &board, MoveList &moves, Move& ttMove, int ply) {
-        std::vector<int> scores(moves.size(), 0);
-
-        int moveCount = 0;
-        for (Move move : moves) {
-            if (ttMove != NULL_MOVE && move == ttMove) {
-                scores[moveCount] = TT_SCORE;
-            } else if constexpr (searchType == QSEARCH) {
-                scores[moveCount] = CAPTURE_SCORE + mvvlva(board, move);
-            } else if (isCapture(move)) {
-                int seeScore = seeCapture(board, move);
-                scores[moveCount] = seeScore >= 0 ? CAPTURE_SCORE + mvvlva(board, move) : mvvlva(board, move);
-            } else if (move == killer1[ply]) {
-                scores[moveCount] = KILLER_ONE_SCORE;
-            } else if (move == killer2[ply]) {
-                scores[moveCount] = KILLER_TWO_SCORE;
-            } else {
-                scores[moveCount] = getHistoryScore(board, move);
-            }
-
-            moveCount++;
-        }
-
-        // Bubble Sort
-        for (int i = 0; i < moves.size() - 1; ++i) {
-            for (int j = 0; j < moves.size() - i - 1; ++j) {
-                if (scores[j] < scores[j + 1]) {
-                    std::swap(moves[j], moves[j + 1]);
-                    std::swap(scores[j], scores[j + 1]);
-                }
-            }
-        }
-    }
 
 } // namespace Astra
 

@@ -82,11 +82,15 @@ namespace Astra {
         MoveList moves(board);
 
         // apply move ordering to sort the moves from best to worst
-        moveOrdering.sortMoves<QSEARCH>(board, moves, entry.move, ply);
+        moveOrdering.sortMoves(board, moves, entry.move, ply);
 
         Move bestMove = NULL_MOVE;
-
         for (Move move: moves) {
+            // skip non-capture moves
+            if(!isCapture(move)) {
+                continue;
+            }
+
             // Static Exchange Evaluation (SEE)
             if (!inCheck && seeCapture(board, move) < 0) {
                 continue;
@@ -248,7 +252,7 @@ namespace Astra {
         MoveList moves(board);
 
         // apply move ordering to sort the moves from best to worst
-        moveOrdering.sortMoves<NEGAMAX>(board, moves, entry.move, ply);
+        moveOrdering.sortMoves(board, moves, entry.move, ply);
 
         int quietMoveCount = 0;
 

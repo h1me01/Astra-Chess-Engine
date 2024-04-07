@@ -132,4 +132,47 @@ namespace Astra {
         killer1[ply] = move;
     }
 
+    void MoveOrdering::sortMoves(Board &board, MoveList &moves, Move& ttMove, int ply) {
+        std::vector<int> scores(moves.size(), 0);
+
+        int moveCount = 0;
+        for (Move move : moves) {
+            if (ttMove != NULL_MOVE && move == ttMove) {
+                scores[moveCount] = TT_SCORE;
+            } if (isCapture(move)) {
+                int seeScore = seeCapture(board, move);
+                scores[moveCount] = seeScore >= 0 ? CAPTURE_SCORE + mvvlva(board, move) : mvvlva(board, move);
+            } else if (move == killer1[ply]) {
+                scores[moveCount] = KILLER_ONE_SCORE;
+            } else if (move == killer2[ply]) {
+                scores[moveCount] = KILLER_TWO_SCORE;
+            } else {
+                scores[moveCount] = getHistoryScore(board, move);
+            }
+
+            moveCount++;
+        }
+
+        // Bubble sort moves based on their scores
+        int n = moves.size();
+        bool swapped;
+        do {
+            swapped = false;
+            for (int i = 0; i < n - 1; i++) {
+                if (scores[i] < scores[i + 1]) {
+                    int tempScore = scores[i];
+                    scores[i] = scores[i + 1];
+                    scores[i + 1] = tempScore;
+
+                    Move tempMove = moves[i];
+                    moves[i] = moves[i + 1];
+                    moves[i + 1] = tempMove;
+
+                    swapped = true;
+                }
+            }
+            n--;
+        } while (swapped);
+    }
+
 } // namespace Astra
