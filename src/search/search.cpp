@@ -133,6 +133,13 @@ namespace Astra {
             }
         }
 
+        // check for mate and stalemate or draw
+        if (moves.size() == 0) {
+            return board.inCheck() ? ply - VALUE_MATE : VALUE_DRAW;
+        } else if (board.isDraw()) {
+            return VALUE_DRAW;
+        }
+
         // store Transposition Entry
         if (bestMove != NULL_MOVE) {
             Bound ttBound = pvNode ? EXACT_BOUND : UPPER_BOUND;
