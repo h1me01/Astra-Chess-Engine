@@ -33,7 +33,7 @@ void printMoves() {
 int main() {
     initLookUpTables();
     zobrist::initZobristKeys();
-    Eval::initEval();
+    Eval::initEvalTables();
 
     // test the performance of the move generation
     // and also the correctness of the move generation
@@ -45,13 +45,13 @@ int main() {
         Astra::Search search(board);
         Move bestMove = search.findBestMove();
 
-        Piece pc = board.getPiece(bestMove.from());
+        Piece pc = board.pieceAt(bestMove.from());
         moveAccumulator.push_back(pieceNotation[typeOfPiece(pc)] + SQSTR[bestMove.from()] + SQSTR[bestMove.to()]);
 
         board.makeMove(bestMove);
+        board.print(WHITE);
 
         MoveList moves(board);
-
         if (moves.size() == 0 || board.isDraw()) {
             break;
         }

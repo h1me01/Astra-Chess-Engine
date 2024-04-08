@@ -84,8 +84,8 @@ std::vector<NetInput> fenToInput(const std::vector<Dataset> &_dataset) {
         Board board(i.fen);
 
         for (PieceType pt: {PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING}) {
-            input.pieces[WHITE][pt] = board.getPieceBB(WHITE, pt);
-            input.pieces[BLACK][pt] = board.getPieceBB(BLACK, pt);
+            input.pieces[WHITE][pt] = board.pieceBitboard(WHITE, pt);
+            input.pieces[BLACK][pt] = board.pieceBitboard(BLACK, pt);
         }
 
         netInput.push_back(std::move(input));

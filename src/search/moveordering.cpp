@@ -29,10 +29,10 @@ namespace Astra {
         U64 attackers;
         for (PieceType pt: {PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING}) {
             if (pt == PAWN) {
-                attackers = pawnAttacks(~c, s) & board.getPieceBB(c, PAWN);
+                attackers = pawnAttacks(~c, s) & board.pieceBitboard(c, PAWN);
             } else {
-                U64 pieces = board.getOccupancy(WHITE) | board.getOccupancy(BLACK);
-                attackers = getAttacks(pt, s, pieces) & board.getPieceBB(c, pt);
+                U64 pieces = board.occupancy(WHITE) | board.occupancy(BLACK);
+                attackers = getAttacks(pt, s, pieces) & board.pieceBitboard(c, pt);
             }
 
             if (attackers) {
@@ -48,8 +48,8 @@ namespace Astra {
         U64 attackers = smallestAttacker(board, s);
 
         if (attackers) {
-            Square attackerFrom = popLsb(&attackers);
-            PieceType capturedPiece = typeOfPiece(board.getPiece(s));
+            Square attackerFrom = popLsb(attackers);
+            PieceType capturedPiece = typeOfPiece(board.pieceAt(s));
             Move move = Move(attackerFrom, s, CAPTURE);
 
             board.makeMove(move);
@@ -65,7 +65,7 @@ namespace Astra {
     int seeCapture(Board &board, Move &captureMove) {
         assert(isCapture(captureMove));
 
-        PieceType to = typeOfPiece(board.getPiece(captureMove.to()));
+        PieceType to = typeOfPiece(board.pieceAt(captureMove.to()));
 
         board.makeMove(captureMove);
         int score = pieceValues[to] - see(board, ~board.sideToMove(), captureMove.to());
@@ -88,8 +88,8 @@ namespace Astra {
     };
 
     int mvvlva(Board &board, Move &move) {
-        int attacker = typeOfPiece(board.getPiece(move.from())) + 1;
-        int victim = typeOfPiece(board.getPiece(move.to())) + 1;
+        int attacker = typeOfPiece(board.pieceAt(move.from())) + 1;
+        int victim = typeOfPiece(board.pieceAt(move.to())) + 1;
         return mvvlvaArray[victim][attacker];
     }
 

@@ -17,7 +17,6 @@
 */
 
 #include "search.h"
-#include "../chess/movegen.h"
 
 namespace Astra {
 
@@ -30,9 +29,7 @@ namespace Astra {
 
     const int DELTA_PIECE_VALUES[] = {114, 281, 297, 512, 936, 0, 0};
 
-    /*
-     * Search
-     */
+
     Search::Search(Board &board) : board(board), tt(16), searchedNodes(0), ply(0) {
         clearData();
     }
@@ -97,9 +94,9 @@ namespace Astra {
             }
 
             // Delta Pruning
-            int captureValue = DELTA_PIECE_VALUES[typeOfPiece(board.getPiece(move.to()))];
+            int captureValue = DELTA_PIECE_VALUES[typeOfPiece(board.pieceAt(move.to()))];
 
-            if (!isPromotion(move) && !inCheck && bestScore + DELTA_MARGIN + captureValue < alpha && board.nonPawnMaterial(stm)) {
+            if (!isPromotion(move) && !inCheck && bestScore + DELTA_MARGIN + captureValue < alpha && board.nonPawnMat(stm)) {
                 continue;
             }
 
@@ -217,7 +214,7 @@ namespace Astra {
             }
 
             // Null Move Pruning
-            if (board.nonPawnMaterial(board.sideToMove()) && depth >= 3 && staticEval >= beta) {
+            if (board.nonPawnMat(board.sideToMove()) && depth >= 3 && staticEval >= beta) {
                 int R = 4;
 
                 board.makeNullMove();

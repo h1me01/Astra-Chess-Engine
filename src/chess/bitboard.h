@@ -168,9 +168,9 @@ namespace Chess {
     }
 
     // returns the index of the least significant bit in the bitboard, and removes the bit from the bitboard
-    inline Square popLsb(U64 *b) {
-        int lsb = bsf(*b);
-        *b &= *b - 1;
+    inline Square popLsb(U64 &b) {
+        int lsb = bsf(b);
+        b &= b - 1;
         return Square(lsb);
     }
 

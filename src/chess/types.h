@@ -25,7 +25,7 @@
 #include <sstream>
 #include <cmath>
 #include <vector>
-#include <assert.h>
+#include <cassert>
 
 namespace Chess {
 
@@ -92,25 +92,11 @@ namespace Chess {
     };
 
     enum File : int {
-        FILE_A,
-        FILE_B,
-        FILE_C,
-        FILE_D,
-        FILE_E,
-        FILE_F,
-        FILE_G,
-        FILE_H
+        FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H
     };
 
     enum Rank : int {
-        RANK_1,
-        RANK_2,
-        RANK_3,
-        RANK_4,
-        RANK_5,
-        RANK_6,
-        RANK_7,
-        RANK_8
+        RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8
     };
 
     enum {
@@ -166,10 +152,8 @@ namespace Chess {
         void operator=(Move m) { move = m.move; }
         bool operator==(Move m) const { return to_from() == m.to_from(); }
         bool operator!=(Move m) const { return to_from() != m.to_from(); }
-
     private:
         uint16_t move;
-
     };
 
     // instead of Move() use this for clarity

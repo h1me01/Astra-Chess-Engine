@@ -26,16 +26,16 @@ namespace Chess {
 
     struct StateInfo {
         U64 hash;
-        Piece capturedPiece;
+        Piece captured;
         Square epSquare;
         U64 castleMask;
         int halfMoveClock;
 
-        StateInfo() : hash(0), capturedPiece(NO_PIECE), epSquare(NO_SQUARE), castleMask(0), halfMoveClock(0) {}
+        StateInfo() : hash(0), captured(NO_PIECE), epSquare(NO_SQUARE), castleMask(0), halfMoveClock(0) {}
 
         StateInfo(const StateInfo &prev) {
             hash = prev.hash;
-            capturedPiece = NO_PIECE;
+            captured = NO_PIECE;
             epSquare = NO_SQUARE;
             castleMask = prev.castleMask;
             halfMoveClock = prev.halfMoveClock;
@@ -60,21 +60,21 @@ namespace Chess {
 
         void print(Color c);
 
-        std::string getFen() const;
-        U64 getPieceBB(Color c, PieceType pt) const { return pieceBB[makePiece(c, pt)]; }
-        Piece getPiece(Square s) const { return board[s]; }
+        std::string fen() const;
+        U64 pieceBitboard(Color c, PieceType pt) const { return pieceBB[makePiece(c, pt)]; }
+        Piece pieceAt(Square s) const { return board[s]; }
         Color sideToMove() const { return stm; }
-        int getPly() const { return gamePly; }
+        int ply() const { return gamePly; }
         U64 getHash() const { return hash; }
         Square kingSquare(Color c) const;
-        U64 getOccupancy(Color c) const;
+        U64 occupancy(Color c) const;
         U64 isAttacked(Color c, Square s, U64 occ) const;
 
         bool inCheck() const;
-        bool nonPawnMaterial(Color c) const;
+        bool nonPawnMat(Color c) const;
 
-        U64 getDiagSliders(Color c) const;
-        U64 getOrthSliders(Color c) const;
+        U64 diagSliders(Color c) const;
+        U64 orthSliders(Color c) const;
 
         void makeMove(const Move &move);
         void unmakeMove(const Move &move);
@@ -83,7 +83,7 @@ namespace Chess {
         void unmakeNullMove();
 
         bool isThreefold() const;
-        bool isInsufficientMaterial() const;
+        bool isInsufficientMat() const;
         bool isDraw() const;
 
     private:
@@ -99,7 +99,7 @@ namespace Chess {
     };
 
     inline Square Board::kingSquare(Color c) const {
-        return bsf(getPieceBB(c, KING));
+        return bsf(pieceBitboard(c, KING));
     }
 
 } // namespace Chess

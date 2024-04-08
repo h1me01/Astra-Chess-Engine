@@ -23,7 +23,7 @@
 
 namespace Chess {
 
-    // psuedorandom number generator from Stockfish
+    // psuedorandom number generator from stockfish
     class PRNG {
         uint64_t s;
 

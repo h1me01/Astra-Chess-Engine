@@ -77,10 +77,10 @@ namespace Chess {
             }
             std::cout << std::endl;
         }
-        std::cout << "Fen: " << getFen() << "\n\n";
+        std::cout << "Fen: " << fen() << "\n\n";
     }
 
-    std::string Board::getFen() const {
+    std::string Board::fen() const {
         std::ostringstream fen;
         int empty;
 
@@ -114,12 +114,12 @@ namespace Chess {
         return fen.str();
     }
 
-    bool Board::nonPawnMaterial(Color c) const {
+    bool Board::nonPawnMat(Color c) const {
         return pieceBB[makePiece(c, KNIGHT)] | pieceBB[makePiece(c, BISHOP)] |
                pieceBB[makePiece(c, ROOK)] | pieceBB[makePiece(c, QUEEN)];
     }
 
-    U64 Board::getDiagSliders(Color c) const {
+    U64 Board::diagSliders(Color c) const {
         return c == WHITE ?
             pieceBB[WHITE_BISHOP] | pieceBB[WHITE_QUEEN]
             :
@@ -127,7 +127,7 @@ namespace Chess {
     }
 
     // return the bitboard of all orthogonal sliders of a given color
-    U64 Board::getOrthSliders(Color c) const {
+    U64 Board::orthSliders(Color c) const {
         return c == WHITE ?
             pieceBB[WHITE_ROOK] | pieceBB[WHITE_QUEEN]
             :
@@ -135,7 +135,7 @@ namespace Chess {
     }
 
     // return the bitboard of all pieces of a given color
-    U64 Board::getOccupancy(Color c) const {
+    U64 Board::occupancy(Color c) const {
         return c == WHITE ?
             pieceBB[WHITE_PAWN] | pieceBB[WHITE_KNIGHT] | pieceBB[WHITE_BISHOP] |
             pieceBB[WHITE_ROOK] | pieceBB[WHITE_QUEEN] | pieceBB[WHITE_KING]
@@ -159,8 +159,8 @@ namespace Chess {
     }
 
     bool Board::inCheck() const {
-        Square kingSq = bsf(getPieceBB(stm, KING));
-        U64 pieces = getOccupancy(WHITE) | getOccupancy(BLACK);
+        Square kingSq = bsf(pieceBitboard(stm, KING));
+        U64 pieces = occupancy(WHITE) | occupancy(BLACK);
         return isAttacked(~stm, kingSq, pieces);
     }
 
@@ -207,13 +207,13 @@ namespace Chess {
             removePiece(from);
 
             if (mf >= PC_KNIGHT) {
-                history[gamePly].capturedPiece = pcTo;
+                history[gamePly].captured = pcTo;
                 removePiece(to);
             }
 
             putPiece(makePiece(stm, typeOfPromotion(mf)), to);
         } else if (mf == CAPTURE) {
-            history[gamePly].capturedPiece = pcTo;
+            history[gamePly].captured = pcTo;
             hash ^= zobrist::zobristTable[pcFrom][from] ^ zobrist::zobristTable[pcFrom][to]
                     ^ zobrist::zobristTable[pcTo][to];
             pieceBB[pcFrom] ^= mask;
@@ -257,11 +257,11 @@ namespace Chess {
             putPiece(makePiece(stm, PAWN), from);
 
             if (mf >= PC_KNIGHT) {
-                putPiece(history[gamePly].capturedPiece, to);
+                putPiece(history[gamePly].captured, to);
             }
         } else if (mf == CAPTURE) {
             movePiece(to, from);
-            putPiece(history[gamePly].capturedPiece, to);
+            putPiece(history[gamePly].captured, to);
         }
 
         gamePly--;
@@ -293,7 +293,7 @@ namespace Chess {
         return false;
     }
 
-    bool Board::isInsufficientMaterial() const {
+    bool Board::isInsufficientMat() const {
         U64 pawns = pieceBB[WHITE_PAWN] | pieceBB[BLACK_PAWN];
         U64 queens = pieceBB[WHITE_QUEEN] | pieceBB[BLACK_QUEEN];
         U64 rooks = pieceBB[WHITE_ROOK] | pieceBB[BLACK_ROOK];
@@ -304,7 +304,7 @@ namespace Chess {
     }
 
     bool Board::isDraw() const {
-        return history[gamePly].halfMoveClock >= 100 || isThreefold() || isInsufficientMaterial();
+        return history[gamePly].halfMoveClock >= 100 || isThreefold() || isInsufficientMat();
     }
 
     /*
