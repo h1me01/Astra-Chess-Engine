@@ -27,26 +27,20 @@ namespace Astra {
     const int RAZOR_MARGIN = 129; // used for razor pruning
     const int FUTILITY_MARGIN = 68; // used for futility pruning
 
-    const int DELTA_PIECE_VALUES[] = {114, 281, 297, 512, 936, 0, 0};
-
+    const int DELTA_PIECE_VALUES[] = {114, 281, 297, 512, 936, 0};
 
     Search::Search(Board &board) : board(board), tt(16), searchedNodes(0), ply(0) {
-        clearData();
-    }
-
-    void Search::clearData() {
         pvTable.reset();
         moveOrdering.clear();
     }
 
-    template<Node node>
     int Search::quiesceSearch(int alpha, int beta) {
         // check if the search should be stopped
         if (timeManager.isTimeExceeded() && timePerMove != 0) {
             return 0;
         }
 
-        bool pvNode = node == PV_NODE;
+        bool pvNode = (beta - alpha) != 1;
 
         // Transposition Table Probing
         U64 hash = board.getHash();
@@ -68,13 +62,8 @@ namespace Astra {
         int bestScore = Eval::evaluate(board);
 
         // Alpha-Beta Pruning
-        if (bestScore >= beta) {
-            return bestScore;
-        }
-
-        if (bestScore > alpha) {
-            alpha = bestScore;
-        }
+        if (bestScore >= beta) { return bestScore; }
+        if (bestScore > alpha) { alpha = bestScore; }
 
         MoveList moves(board);
 
@@ -84,20 +73,24 @@ namespace Astra {
         Move bestMove = NULL_MOVE;
         for (Move move: moves) {
             // skip non-capture moves
-            if(!isCapture(move)) {
+            if (!isCapture(move)) {
                 continue;
             }
 
-            // Static Exchange Evaluation (SEE)
-            if (!inCheck && seeCapture(board, move) < 0) {
-                continue;
-            }
+            if (!inCheck) {
+                /*
+                // Static Exchange Evaluation (SEE)
+                if (seeCapture(board, move) < 0) {
+                    continue;
+                }
+                */
 
-            // Delta Pruning
-            int captureValue = DELTA_PIECE_VALUES[typeOfPiece(board.pieceAt(move.to()))];
+                // Delta Pruning
+                int captureValue = DELTA_PIECE_VALUES[typeOfPiece(board.pieceAt(move.to()))];
 
-            if (!isPromotion(move) && !inCheck && bestScore + DELTA_MARGIN + captureValue < alpha && board.nonPawnMat(stm)) {
-                continue;
+                if (!isPromotion(move) && bestScore + DELTA_MARGIN + captureValue < alpha && board.nonPawnMat(stm)) {
+                    continue;
+                }
             }
 
             // increase the searched nodes
@@ -107,7 +100,7 @@ namespace Astra {
             board.makeMove(move);
             ply++;
 
-            int score = -quiesceSearch<node>(-beta, -alpha);
+            int score = -quiesceSearch(-beta, -alpha);
 
             // undo move and decrease ply
             board.unmakeMove(move);
@@ -116,14 +109,14 @@ namespace Astra {
             // update best score and best move
             if (score > bestScore) {
                 bestScore = score;
+                bestMove = move;
 
                 if (score > alpha) {
                     alpha = score;
-                    bestMove = move;
 
                     // store Transposition Entry
                     if (score >= beta) {
-                        tt.store(hash, bestMove, bestScore, ply, LOWER_BOUND);
+                        tt.store(hash, bestMove, bestScore, 0, LOWER_BOUND);
                         return bestScore;
                     }
                 }
@@ -132,7 +125,7 @@ namespace Astra {
 
         // check for mate and stalemate or draw
         if (moves.size() == 0) {
-            return board.inCheck() ? ply - VALUE_MATE : VALUE_DRAW;
+            return inCheck ? -VALUE_MATE + ply : VALUE_DRAW;
         } else if (board.isDraw()) {
             return VALUE_DRAW;
         }
@@ -146,15 +139,13 @@ namespace Astra {
         return bestScore;
     }
 
-    template<Node node>
     int Search::negamax(int alpha, int beta, int depth) {
         // check if the search should be stopped
         if (timeManager.isTimeExceeded() && timePerMove != 0) {
             return 0;
         }
 
-        bool rootNode = node == ROOT_NODE;
-        bool pvNode = node == PV_NODE;
+        bool pvNode = (beta - alpha) != 1;;
         bool inCheck = board.inCheck();
         int bestScore = -VALUE_INFINITE;
 
@@ -164,7 +155,7 @@ namespace Astra {
         // if we reached the maximum depth, do quiescence search
         if (depth <= 0) {
             // do a quiescence search
-            return quiesceSearch<node>(alpha, beta);
+            return quiesceSearch(alpha, beta);
         }
 
         // Transposition Table Probing
@@ -172,7 +163,7 @@ namespace Astra {
         TTEntry entry;
         bool ttHit = tt.lookup(entry, hash, depth);
 
-        if (ttHit && !pvNode && !rootNode) {
+        if (ttHit && !pvNode) {
             if (entry.bound == EXACT_BOUND) {
                 return entry.score;
             } else if (entry.bound == LOWER_BOUND) {
@@ -193,24 +184,22 @@ namespace Astra {
             staticEval = ttHit ? entry.score : Eval::evaluate(board);
         }
 
-        if (!rootNode) {
-            // Internal Iterative Deepening
-            if (depth >= 3 && !ttHit) {
-                depth--;
-            }
+        // Internal Iterative Deepening
+        if (depth >= 3 && !ttHit) {
+            depth--;
+        }
 
-            if (depth <= 0) {
-                return quiesceSearch<PV_NODE>(alpha, beta);
-            }
+        if (depth <= 0) {
+            return quiesceSearch(alpha, beta);
         }
 
         // apply pruning techniques if it is not a pv node, root node and not in check
-        if (!rootNode && !pvNode && !inCheck) {
+        if (!pvNode && !inCheck) {
             int score;
 
             // Razoring
             if (depth < 3 && staticEval + RAZOR_MARGIN < alpha) {
-                return quiesceSearch<NON_PV_NODE>(alpha, beta);
+                return quiesceSearch(alpha, beta);
             }
 
             // Null Move Pruning
@@ -218,7 +207,7 @@ namespace Astra {
                 int R = 4;
 
                 board.makeNullMove();
-                score = -negamax<NON_PV_NODE>(-beta, -beta + 1, depth - R);
+                score = -negamax(-beta, -beta + 1, depth - R);
                 board.unmakeNullMove();
 
                 if (score >= beta) {
@@ -258,10 +247,9 @@ namespace Astra {
         // apply move ordering to sort the moves from best to worst
         moveOrdering.sortMoves(board, moves, entry.move, ply);
 
+        Move bestMove = NULL_MOVE;
+
         int quietMoveCount = 0;
-
-        Move bestMove;
-
         int moveCount = 0;
         for (Move move: moves) {
             bool moveIsCapture = isCapture(move);
@@ -273,7 +261,7 @@ namespace Astra {
             }
 
             // Apply Pruning Techniques
-            if (!rootNode && !moveIsCapture && !moveIsPromotion && !inCheck) {
+            if (!moveIsCapture && !moveIsPromotion && !inCheck) {
                 // Futility Pruning
                 if (depth <= 4 && (staticEval + FUTILITY_MARGIN * depth) < alpha) {
                     continue;
@@ -302,28 +290,22 @@ namespace Astra {
 
             // full-depth search for the first move
             if (moveCount == 0) {
-                score = -negamax<NON_PV_NODE>(-beta, -alpha, depth - 1);
+                score = -negamax(-beta, -alpha, depth - 1);
             } else {
                 // Late Move Reduction (LMR)
                 if (!pvNode && moveCount >= 4 && depth >= 3 && !inCheck) {
-                    score = -negamax<NON_PV_NODE>(-beta, -alpha, depth - 2);
-
-                    // if the score is greater than alpha, do a full-depth search
-                    if (score > alpha) {
-                        score = -negamax<NON_PV_NODE>(-beta, -alpha, depth - 1);
-                    }
+                    score = -negamax(-alpha - 1, -alpha, depth - 2);
                 } else {
-                    score = -negamax<NON_PV_NODE>(-beta, -alpha, depth - 1);
+                    score = alpha + 1;
+                }
 
-                    /*
-                    // Principal Variation Search (PVS)
-                    score = -negamax<PV_NODE>(-alpha - 1, -alpha, depth - 1);
+                // Principal Variation Search (PVS)
+                if (score > alpha) {
+                    score = -negamax(-alpha - 1, -alpha, depth - 1);
 
-                    // if the score is greater than alpha, do a full-depth search
                     if (score > alpha && score < beta) {
-                        score = -negamax<NON_PV_NODE>(-beta, -alpha, depth - 1);
+                        score = -negamax(-beta, -alpha, depth - 1);
                     }
-                     */
                 }
             }
 
@@ -367,7 +349,7 @@ namespace Astra {
 
         // check for mate and stalemate or draw
         if (moves.size() == 0) {
-            return board.inCheck() ? ply - VALUE_MATE : VALUE_DRAW;
+            return board.inCheck() ? -VALUE_MATE + ply : VALUE_DRAW;
         } else if (board.isDraw()) {
             return VALUE_DRAW;
         }
@@ -393,7 +375,7 @@ namespace Astra {
             beta = prevEval + aspWindow;
         }
 
-        int value = 0;
+        int value;
         while (true) {
             if (alpha < -3500) {
                 alpha = -VALUE_INFINITE;
@@ -403,15 +385,15 @@ namespace Astra {
                 beta = VALUE_INFINITE;
             }
 
-            value = negamax<ROOT_NODE>(alpha, beta, depth);
+            value = negamax(alpha, beta, depth);
 
             // adjust alpha, beta and window
             if (value <= alpha) {
                 beta = (alpha + beta) / 2;
-                alpha = std::max(alpha - aspWindow, -(static_cast<int>(VALUE_INFINITE)));
+                alpha = std::max(alpha - aspWindow, (int)-VALUE_INFINITE);
                 aspWindow += aspWindow / 2;
             } else if (value >= beta) {
-                beta = std::min(beta + aspWindow, static_cast<int>(VALUE_INFINITE));
+                beta = std::min(beta + aspWindow, (int)VALUE_INFINITE);
                 aspWindow += aspWindow / 2;
             } else {
                 break;
@@ -438,6 +420,7 @@ namespace Astra {
             pvTable.reset();
 
             // do search
+            //int score = aspirationSearch(depth, prevEval);
             int score = aspirationSearch(depth, prevEval);
 
             // DEBUG: print search info

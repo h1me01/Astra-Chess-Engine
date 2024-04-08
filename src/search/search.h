@@ -27,12 +27,6 @@
 
 namespace Astra {
 
-    enum Node {
-        PV_NODE,
-        ROOT_NODE,
-        NON_PV_NODE
-    };
-
     class Search {
     public:
         explicit Search(Board &board);
@@ -45,24 +39,20 @@ namespace Astra {
     private:
         static const int MAX_DEPTH = 64;
 
-        int timePerMove;
-
-        TimeManager timeManager;
-        MoveOrdering moveOrdering;
-        TTable tt;
-
         U64 searchedNodes;
+
+        int timePerMove;
         int ply;
 
         Board board;
+
+        TimeManager timeManager;
         PVTable pvTable;
+        TTable tt;
+        MoveOrdering moveOrdering;
 
-        void clearData();
-
-        template<Node node>
         int quiesceSearch(int alpha, int beta);
 
-        template<Node node>
         int negamax(int alpha, int beta, int depth);
 
         int aspirationSearch(int depth, int prevEval);

@@ -19,7 +19,7 @@
 #include "chess/perft.h"
 #include "search/search.h"
 
-const std::string pieceNotation[] = {"P", "N", "B", "R", "Q", "K", ""};
+const std::string pieceNot[] = {"P", "N", "B", "R", "Q", "K", ""};
 std::vector<std::string> moveAccumulator;
 
 void printMoves() {
@@ -35,8 +35,7 @@ int main() {
     zobrist::initZobristKeys();
     Eval::initEvalTables();
 
-    // test the performance of the move generation
-    // and also the correctness of the move generation
+    // test performance and correctness of the move generation
     //testPerft(5);
 
     Board board(DEFAULT_FEN);
@@ -46,7 +45,7 @@ int main() {
         Move bestMove = search.findBestMove();
 
         Piece pc = board.pieceAt(bestMove.from());
-        moveAccumulator.push_back(pieceNotation[typeOfPiece(pc)] + SQSTR[bestMove.from()] + SQSTR[bestMove.to()]);
+        moveAccumulator.push_back(pieceNot[typeOfPiece(pc)] + SQSTR[bestMove.from()] + SQSTR[bestMove.to()]);
 
         board.makeMove(bestMove);
         board.print(WHITE);
