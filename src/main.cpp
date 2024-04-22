@@ -16,6 +16,7 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include "genData.h"
 #include "chess/perft.h"
 #include "search/search.h"
 
@@ -35,12 +36,15 @@ int main() {
     zobrist::initZobristKeys();
     Eval::initEvalTables();
 
-    // test performance and correctness of the move generation
+    // generate input for neural network
+    //saveNetInput(fenToInput(loadDataset(INT_MAX)));
+
+    // test performance and correctness of move generation
     //testPerft(5);
 
     Board board(DEFAULT_FEN);
 
-    while(true) {
+    while (true) {
         Astra::Search search(board);
         Move bestMove = search.findBestMove();
 

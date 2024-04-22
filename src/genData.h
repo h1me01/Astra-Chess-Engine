@@ -24,8 +24,8 @@
 
 using namespace Chess;
 
-const std::string DATA_PATH = "Data/TrainingData/chessData.csv";
-const std::string NET_DATA_PATH = "data.bin";
+const std::string DATA_PATH = "C:/Users/semio/Documents/Coding/Projects/Astra-Data/TrainingData/chessData.csv";
+const std::string NET_DATA_PATH = "C:/Users/semio/Downloads/data.bin";
 
 struct Dataset {
     std::string fen;
@@ -38,8 +38,9 @@ struct Dataset {
 };
 
 struct NetInput {
-    U64 pieces[NUM_COLORS][6];
+    U64 pieces[NUM_COLORS][6]{};
     float target;
+    Color stm;
 
     NetInput() {
         target = 0;
@@ -51,7 +52,7 @@ std::vector<Dataset> loadDataset(int dataSize) {
     std::ifstream file(DATA_PATH);
 
     if (!file) {
-        std::cerr << "Error opening file." << std::endl;
+        std::cerr << "Error opening file" << std::endl;
         return dataset;
     }
 
@@ -70,6 +71,7 @@ std::vector<Dataset> loadDataset(int dataSize) {
         dataset.push_back(data);
     }
 
+    std::cout << "Loaded " << dataset.size() << " positions" << std::endl;
     return dataset;
 }
 
@@ -79,7 +81,7 @@ std::vector<NetInput> fenToInput(const std::vector<Dataset> &_dataset) {
 
     for (const auto &i: _dataset) {
         NetInput input;
-        input.target = i.evaluate;
+        input.target = i.eval;
 
         Board board(i.fen);
 
@@ -88,23 +90,28 @@ std::vector<NetInput> fenToInput(const std::vector<Dataset> &_dataset) {
             input.pieces[BLACK][pt] = board.pieceBitboard(BLACK, pt);
         }
 
+        input.stm = board.sideToMove();
         netInput.push_back(std::move(input));
     }
 
     return netInput;
 }
 
-void saveNetInput(std::vector<NetInput> &_data) {
+void saveNetInput(const std::vector<NetInput>& data) {
     std::ofstream file(NET_DATA_PATH, std::ios::binary);
     if (!file.is_open()) {
-        std::cerr << "Error writing in file." << std::endl;
+        std::cerr << "Error writing in file" << std::endl;
     }
 
-    for (const NetInput &input: _data) {
+    for (const NetInput &input: data) {
         file.write(reinterpret_cast<const char *>(&input), sizeof(NetInput));
     }
 
     file.close();
+
+    std::cout << "Saved positions at " << NET_DATA_PATH << std::endl;
+
+    exit(0);
 }
 
 

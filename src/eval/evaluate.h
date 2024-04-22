@@ -21,6 +21,8 @@
 
 #include "../chess/board.h"
 
+using namespace Chess;
+
 namespace Eval {
 
     const int gamephaseInc[12] = {0, 1, 1, 2, 4, 0};
@@ -112,59 +114,9 @@ namespace Eval {
             -27, -11, 4, 13, 14, 4, -5, -17, -53, -34, -21, -11, -28, -14, -24, -43
     };
 
-    inline const int *mg_pesto_table[6] = {
-            mg_pawn_table, mg_knight_table, mg_bishop_table, mg_rook_table, mg_queen_table, mg_king_table
-    };
+    void initEvalTables();
 
-    inline const int *eg_pesto_table[6] = {
-            eg_pawn_table, eg_knight_table, eg_bishop_table, eg_rook_table, eg_queen_table, eg_king_table
-    };
-
-    inline int mg_table[12][64];
-    inline int eg_table[12][64];
-
-    inline void initEvalTables() {
-        for (int pt = PAWN; pt <= KING; ++pt) {
-            for (int sq = 0; sq < 64; ++sq) {
-                mg_table[pt][sq] = mg_value[pt] + mg_pesto_table[pt][sq];
-                eg_table[pt][sq] = eg_value[pt] + eg_pesto_table[pt][sq];
-
-                mg_table[pt + 6][sq] = mg_value[pt] + mg_pesto_table[pt][relativeSquare(BLACK, (Square) sq)];
-                eg_table[pt + 6][sq] = eg_value[pt] + eg_pesto_table[pt][relativeSquare(BLACK, (Square) sq)];
-            }
-        }
-    }
-
-    inline int evaluate(Board &board) {
-        int mg[2];
-        int eg[2];
-        int gamePhase = 0;
-
-        mg[WHITE] = 0;
-        mg[BLACK] = 0;
-        eg[WHITE] = 0;
-        eg[BLACK] = 0;
-
-        /* evaluate each piece */
-        for (int sq = 0; sq < 64; ++sq) {
-            Piece pc = board.pieceAt((Square) sq);
-
-            if (pc != NO_PIECE) {
-                mg[colorOfPiece(pc)] += mg_table[pc][sq];
-                eg[colorOfPiece(pc)] += eg_table[pc][sq];
-                gamePhase += gamephaseInc[typeOfPiece(pc)];
-            }
-        }
-
-        Color stm = board.sideToMove();
-        /* tapered evaluate */
-        int mgScore = mg[stm] - mg[~stm];
-        int egScore = eg[stm] - eg[~stm];
-        int mgPhase = gamePhase;
-        if (mgPhase > 24) mgPhase = 24; /* in case of early promotion */
-        int egPhase = 24 - mgPhase;
-        return (mgScore * mgPhase + egScore * egPhase) / 24;
-    }
+    int evaluate(Board &board);
 
 } // namespace Eval
 
