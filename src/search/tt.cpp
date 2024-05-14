@@ -28,9 +28,8 @@ namespace Astra {
         try {
             entries = new TTEntry[ttSize];
 
-            for (int i = 0; i < ttSize; ++i) {
+            for (int i = 0; i < ttSize; ++i)
                 entries[i] = TTEntry();
-            }
         } catch (const std::bad_alloc &e) {
             std::cerr << "Failed to allocate transposition table" << std::endl;
             std::cerr << "Error: " << e.what() << std::endl;
@@ -56,9 +55,8 @@ namespace Astra {
     void TTable::store(U64 hash, Move move, int score, int depth, Bound bound) {
         U64 index = hash % ttSize;
 
-        if (entries[index].hash == hash && entries[index].depth > depth) {
+        if (entries[index].hash == hash && entries[index].depth > depth)
             return;
-        }
 
         entries[index] = TTEntry(hash, depth, move, score, bound);
     }

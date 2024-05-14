@@ -24,9 +24,8 @@ const std::string pieceNot[] = {"P", "N", "B", "R", "Q", "K", ""};
 std::vector<std::string> moveAccumulator;
 
 void printMoves() {
-    for (int i = 0; i < moveAccumulator.size(); ++i) {
-        std::cout << moveAccumulator[i] << " ";
-    }
+    for (const auto & i : moveAccumulator)
+        std::cout << i << " ";
 
     std::cout << std::endl;
 }

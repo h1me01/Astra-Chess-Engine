@@ -66,7 +66,8 @@ namespace Chess {
         Color sideToMove() const { return stm; }
         int ply() const { return gamePly; }
         U64 getHash() const { return hash; }
-        Square kingSquare(Color c) const;
+        Square kingSquare(Color c) const {return bsf(pieceBitboard(c, KING)); }
+        
         U64 occupancy(Color c) const;
         U64 isAttacked(Color c, Square s, U64 occ) const;
 
@@ -97,10 +98,6 @@ namespace Chess {
         void removePiece(Square s);
         void movePiece(Square from, Square to);
     };
-
-    inline Square Board::kingSquare(Color c) const {
-        return bsf(pieceBitboard(c, KING));
-    }
 
 } // namespace Chess
 

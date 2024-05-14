@@ -144,7 +144,7 @@ namespace Chess {
         }
 
         Square to() const { return Square(move & 0x3f); }
-        Square from() const { return Square((move >> 6) & 0x3f); }
+        Square from() const { return Square(move >> 6 & 0x3f); }
         int to_from() const { return move & 0xffff; }
 
         MoveFlags flags() const { return MoveFlags(move >> 12); }

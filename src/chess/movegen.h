@@ -22,7 +22,6 @@
 #include "board.h"
 
 namespace Chess {
-
     constexpr U64 shortCastlingMask(Color c) {
         return c == WHITE ? WHITE_OO_MASK : BLACK_OO_MASK;
     }
@@ -45,7 +44,7 @@ namespace Chess {
 
     // helper to generate quiet moves
     template<MoveFlags MF>
-    inline Move *make(Move *&moves, Square from, U64 to) {
+    Move *make(Move *&moves, Square from, U64 to) {
         while (to) {
             *moves++ = Move(from, popLsb(to), MF);
         }
@@ -54,7 +53,7 @@ namespace Chess {
 
     // helper to generate promotion capture moves
     template<Color Us, Direction d, MoveFlags mf>
-    inline Move *makePromotions(Move *&moves, U64 to) {
+    Move *makePromotions(Move *&moves, U64 to) {
         while (to) {
             Square s = popLsb(to);
             Square from = s - relativeDir(Us, d);
@@ -69,9 +68,7 @@ namespace Chess {
 
     template<Color Us>
     U64 diagonalPawnAttacks(U64 pawns) {
-        return Us == WHITE ?
-               shift(NORTH_WEST, pawns) | shift(NORTH_EAST, pawns) :
-               shift(SOUTH_WEST, pawns) | shift(SOUTH_EAST, pawns);
+        return Us == WHITE ? shift(NORTH_WEST, pawns) | shift(NORTH_EAST, pawns) : shift(SOUTH_WEST, pawns) | shift(SOUTH_EAST, pawns);
     }
 
     template<Color Us>
@@ -154,17 +151,15 @@ namespace Chess {
         // checks if king and the h-rook have moved
         U64 isAllowed = castleMask & shortCastlingMask(Us);
 
-        if (!(possibleChecks | isAllowed)) {
+        if (!(possibleChecks | isAllowed))
             *moves++ = Us == WHITE ? Move(e1, g1, OO) : Move(e8, g8, OO);
-        }
 
         // ignoreLongCastlingDanger is used to get rid of the danger on the possibleChecks or b8 square
-        possibleChecks = (occ | (board.danger & ~ignoreLongCastlingDanger(Us))) & longCastlingBlockersMask(Us);
+        possibleChecks = (occ | board.danger & ~ignoreLongCastlingDanger(Us)) & longCastlingBlockersMask(Us);
         isAllowed = castleMask & longCastlingMask(Us);
 
-        if (!(possibleChecks | isAllowed)) {
+        if (!(possibleChecks | isAllowed))
             *moves++ = Us == WHITE ? Move(e1, c1, OOO) : Move(e8, c8, OOO);
-        }
 
         return moves;
     }
@@ -276,16 +271,14 @@ namespace Chess {
                     U64 newOccMask = occ ^ SQUARE_BB[s] ^ shift(relativeDir(Us, SOUTH), SQUARE_BB[epSq]);
                     U64 attacker = slidingAttacks(ourKingSq, newOccMask, MASK_RANK[squareRank(ourKingSq)]);
 
-                    if ((attacker & theirOrthSliders) == 0) {
+                    if ((attacker & theirOrthSliders) == 0)
                         *moves++ = Move(s, epSq, EN_PASSANT);
-                    }
                 }
 
                 // pinned pawns can only capture e.p. if they are pinned diagonally and the e.p. square is in line with the king
                 canCapture = epCaptureBB & board.pinned & LINE[epSq][ourKingSq];
-                if (canCapture) {
+                if (canCapture)
                     *moves++ = Move(bsf(canCapture), epSq, EN_PASSANT);
-                }
             }
         }
 
@@ -360,9 +353,8 @@ namespace Chess {
 
         // if double check, then only king moves are legal
         int checkersCount = sparsePopCount(board.checkers);
-        if (checkersCount == 2) {
+        if (checkersCount == 2)
             return moves;
-        }
 
         // single check
         if (checkersCount == 1) {
@@ -378,18 +370,17 @@ namespace Chess {
                     const U64 ourPawns = board.pieceBitboard(Us, PAWN);
 
                     canCapture = pawnAttacks(them, epSq) & ourPawns & ~board.pinned;
-                    while (canCapture) {
+                    while (canCapture)
                         *moves++ = Move(popLsb(canCapture), epSq, EN_PASSANT);
-                    }
                 }
             }
 
             // if checker is either a pawn or a knight, the only legal moves are to capture it
             if (checkerPiece == makePiece(them, KNIGHT)) {
                 canCapture = board.isAttacked(Us, checkerSquare, occ) & ~board.pinned;
-                while (canCapture) {
+                while (canCapture)
                     *moves++ = Move(popLsb(canCapture), checkerSquare, CAPTURE);
-                }
+
                 return moves;
             }
 
@@ -417,11 +408,10 @@ namespace Chess {
         explicit MoveList(Board &board) {
             Color stm = board.sideToMove();
 
-            if (stm == WHITE) {
+            if (stm == WHITE)
                 last = genLegalMoves<WHITE>(board, list);
-            } else {
+            else
                 last = genLegalMoves<BLACK>(board, list);
-            }
         }
 
         constexpr Move &operator[](int i) { return list[i]; }
@@ -429,6 +419,7 @@ namespace Chess {
         const Move *begin() const { return list; }
         const Move *end() const { return last; }
         size_t size() const { return last - list; }
+
     private:
         Move list[MAX_MOVES];
         Move *last;

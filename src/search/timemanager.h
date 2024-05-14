@@ -50,7 +50,7 @@ namespace Astra {
 
     private:
         TimePoint startTime;
-        int timePerMove;
+        int timePerMove{};
 
         // get elapsed time since start (in milliseconds)
         int elapsedTime() const {

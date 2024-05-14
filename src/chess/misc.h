@@ -22,7 +22,6 @@
 #include "types.h"
 
 namespace Chess {
-
     // helper to print bitboards for debugging
     inline void printBitboard(U64 b) {
         for (int rank = 7; rank >= 0; --rank) {
@@ -67,11 +66,10 @@ namespace Chess {
 
     // prints the move
     inline std::ostream &operator<<(std::ostream &os, const Move &m) {
-        if (SQSTR[m.from()] == "a1" && SQSTR[m.to()] == "a1") {
+        if (SQSTR[m.from()] == "a1" && SQSTR[m.to()] == "a1")
             os << "NULL MOVE";
-        } else {
+        else
             os << SQSTR[m.from()] << SQSTR[m.to()];
-        }
 
         return os;
     }
@@ -156,7 +154,6 @@ namespace Chess {
     constexpr Square relativeSquare(Color c, Square s) {
         return c == WHITE ? s : Square(s ^ 56);
     }
-
 } //namespace Chess
 
 

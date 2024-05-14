@@ -22,8 +22,8 @@ namespace Chess {
 
     void initRookAttacks() {
         for (Square s = a1; s <= h8; ++s) {
-            U64 edges = ((MASK_RANK[FILE_A] | MASK_RANK[FILE_H]) & ~MASK_RANK[squareRank(s)]) |
-                        ((MASK_FILE[FILE_A] | MASK_FILE[FILE_H]) & ~MASK_FILE[squareFile(s)]);
+            U64 edges = (MASK_RANK[FILE_A] | MASK_RANK[FILE_H]) & ~MASK_RANK[squareRank(s)] |
+                        (MASK_FILE[FILE_A] | MASK_FILE[FILE_H]) & ~MASK_FILE[squareFile(s)];
             ROOK_ATTACK_MASKS[s] = (MASK_RANK[squareRank(s)] ^ MASK_FILE[squareFile(s)]) & ~edges;
             ROOK_ATTACK_SHIFTS[s] = 64 - popCount(ROOK_ATTACK_MASKS[s]);
 
@@ -41,8 +41,8 @@ namespace Chess {
 
     void initBishopAttacks() {
         for (Square s = a1; s <= h8; ++s) {
-            U64 edges = ((MASK_RANK[FILE_A] | MASK_RANK[FILE_H]) & ~MASK_RANK[squareRank(s)]) |
-                        ((MASK_FILE[FILE_A] | MASK_FILE[FILE_H]) & ~MASK_FILE[squareFile(s)]);
+            U64 edges = (MASK_RANK[FILE_A] | MASK_RANK[FILE_H]) & ~MASK_RANK[squareRank(s)] |
+                        (MASK_FILE[FILE_A] | MASK_FILE[FILE_H]) & ~MASK_FILE[squareFile(s)];
             BISHOP_ATTACK_MASKS[s] = (MASK_DIAGONAL[squareDiag(s)] ^ MASK_ANTI_DIAGONAL[squareAntiDiag(s)]) & ~edges;
             BISHOP_ATTACK_SHIFTS[s] = 64 - popCount(BISHOP_ATTACK_MASKS[s]);
 
@@ -53,7 +53,7 @@ namespace Chess {
                 index = index >> BISHOP_ATTACK_SHIFTS[s];
                 BISHOP_ATTACKS[s][index] = slidingAttacks(s, subset, MASK_DIAGONAL[squareDiag(s)]) |
                                            slidingAttacks(s, subset, MASK_ANTI_DIAGONAL[squareAntiDiag(s)]);
-                subset = (subset - BISHOP_ATTACK_MASKS[s]) & BISHOP_ATTACK_MASKS[s];
+                subset = subset - BISHOP_ATTACK_MASKS[s] & BISHOP_ATTACK_MASKS[s];
             } while (subset);
         }
     }

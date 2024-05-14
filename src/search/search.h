@@ -21,7 +21,6 @@
 
 #include "timemanager.h"
 #include "pvtable.h"
-#include "tt.h"
 #include "moveordering.h"
 #include "../eval/evaluate.h"
 

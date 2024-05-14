@@ -21,6 +21,7 @@
 
 #include "../chess/board.h"
 #include "../chess/movegen.h"
+#include "tt.h"
 
 using namespace Chess;
 
@@ -65,7 +66,7 @@ namespace Astra {
         void updateHistory(Board &board, Move &move, int score);
         void updateKiller(Move &move, int ply);
 
-        void sortMoves(Board &board, MoveList &moves, Move& ttMove, int ply);
+        void sortMoves(Board &board, MoveList &moves, TTable& tt, int ply);
 
     private:
         Move killer1[MAX_PLY];

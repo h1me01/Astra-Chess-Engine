@@ -23,7 +23,7 @@
 
 namespace Chess {
 
-    const U64 KING_ATTACKS[NUM_SQUARES] = {
+    constexpr U64 KING_ATTACKS[NUM_SQUARES] = {
             0x302, 0x705, 0xe0a, 0x1c14,
             0x3828, 0x7050, 0xe0a0, 0xc040,
             0x30203, 0x70507, 0xe0a0e, 0x1c141c,
@@ -42,7 +42,7 @@ namespace Chess {
             0x2838000000000000, 0x5070000000000000, 0xa0e0000000000000, 0x40c0000000000000,
     };
 
-    const U64 KNIGHT_ATTACKS[NUM_SQUARES] = {
+    constexpr U64 KNIGHT_ATTACKS[NUM_SQUARES] = {
             0x20400, 0x50800, 0xa1100, 0x142200,
             0x284400, 0x508800, 0xa01000, 0x402000,
             0x2040004, 0x5080008, 0xa110011, 0x14220022,
@@ -61,7 +61,7 @@ namespace Chess {
             0x44280000000000, 0x0088500000000000, 0x0010a00000000000, 0x20400000000000
     };
 
-    const U64 PAWN_ATTACKS[NUM_COLORS][NUM_SQUARES] = {
+    constexpr U64 PAWN_ATTACKS[NUM_COLORS][NUM_SQUARES] = {
             { // white pawn getAttacks
                     0x200, 0x500, 0xa00, 0x1400,
                     0x2800, 0x5000, 0xa000, 0x4000,
@@ -114,12 +114,12 @@ namespace Chess {
     // this uses the Hyperbola Quintessence Algorithm
     inline U64 slidingAttacks(Square s, U64 occ, U64 mask) {
         U64 maskOcc = mask & occ;
-        return ((maskOcc - SQUARE_BB[s] * 2) ^ reverse(reverse(maskOcc) - reverse(SQUARE_BB[s]) * 2)) & mask;
+        return (maskOcc - SQUARE_BB[s] * 2 ^ reverse(reverse(maskOcc) - reverse(SQUARE_BB[s]) * 2)) & mask;
     }
 
     inline U64 getRookAttacks(Square s, U64 occ) {
         U64 maskedOcc = occ & ROOK_ATTACK_MASKS[s];
-        U64 index = (maskedOcc * ROOK_MAGICS[s]) >> ROOK_ATTACK_SHIFTS[s];
+        U64 index = maskedOcc * ROOK_MAGICS[s] >> ROOK_ATTACK_SHIFTS[s];
         return ROOK_ATTACKS[s][index];
     }
 

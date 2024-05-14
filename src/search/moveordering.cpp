@@ -35,9 +35,7 @@ namespace Astra {
                 attackers = getAttacks(pt, s, pieces) & board.pieceBitboard(c, pt);
             }
 
-            if (attackers) {
-                return attackers;
-            }
+            if (attackers) return attackers;
         }
 
         return 0;
@@ -77,19 +75,18 @@ namespace Astra {
     /*
      * Most Valuable Victim / Least Valuable Attacker
      */
-    constexpr int mvvlvaArray[8][8] = {
-            {0, 0,   0,   0,   0,   0,   0,   0},
-            {0, 205, 204, 203, 202, 201, 200, 0},
-            {0, 305, 304, 303, 302, 301, 300, 0},
-            {0, 405, 404, 403, 402, 401, 400, 0},
-            {0, 505, 504, 503, 502, 501, 500, 0},
-            {0, 605, 604, 603, 602, 601, 600, 0},
-            {0, 705, 704, 703, 702, 701, 700, 0}
+    constexpr int mvvlvaArray[7][7] = {
+            {205, 204, 203, 202, 201, 200, 0},
+            {305, 304, 303, 302, 301, 300, 0},
+            {405, 404, 403, 402, 401, 400, 0},
+            {505, 504, 503, 502, 501, 500, 0},
+            {605, 604, 603, 602, 601, 600, 0},
+            {705, 704, 703, 702, 701, 700, 0}
     };
 
     int mvvlva(Board &board, Move &move) {
-        int attacker = typeOfPiece(board.pieceAt(move.from())) + 1;
-        int victim = typeOfPiece(board.pieceAt(move.to())) + 1;
+        int attacker = typeOfPiece(board.pieceAt(move.from()));
+        int victim = typeOfPiece(board.pieceAt(move.to()));
         return mvvlvaArray[victim][attacker];
     }
 
@@ -108,7 +105,7 @@ namespace Astra {
 
         for (auto &i: history) {
             for (auto &j: i) {
-                for (int &k: j) { k = 0; }
+                for (int &k: j) k = 0;
             }
         }
     }
@@ -132,12 +129,15 @@ namespace Astra {
         killer1[ply] = move;
     }
 
-    void MoveOrdering::sortMoves(Board &board, MoveList &moves, Move& ttMove, int ply) {
+    void MoveOrdering::sortMoves(Board &board, MoveList &moves, TTable& tt, int ply) {
+        TTEntry entry;
+        bool ttHit = tt.lookup(entry, board.getHash(), 0);
+
         std::vector<int> scores(moves.size(), 0);
 
         int moveCount = 0;
         for (Move move : moves) {
-            if (ttMove != NULL_MOVE && move == ttMove) {
+            if (ttHit && move == entry.move) {
                 scores[moveCount] = TT_SCORE;
             } if (isCapture(move)) {
                 int seeScore = seeCapture(board, move);
@@ -156,6 +156,7 @@ namespace Astra {
         // Bubble sort moves based on their scores
         int n = moves.size();
         bool swapped;
+
         do {
             swapped = false;
             for (int i = 0; i < n - 1; i++) {
