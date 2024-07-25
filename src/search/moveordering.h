@@ -36,18 +36,12 @@ namespace Astra {
     int seeCapture(Board &board, Move &captureMove);
 
     /*
-     * Most Valuable Victim / Least Valuable Attacker
-     */
-    int mvvlva(Board &board, Move& move);
-
-    /*
      * Move Ordering
      */
     enum SearchType {
         QSEARCH, NEGAMAX
     };
 
-    // Move Scores
     enum MoveScores : int {
         TT_SCORE = 10'000'000,
         CAPTURE_SCORE = 7'000'000,

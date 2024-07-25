@@ -25,15 +25,14 @@ std::vector<std::string> moveAccumulator;
 
 void printMoves() {
     for (const auto & i : moveAccumulator)
-        std::cout << i << " ";
-
+        std::cerr << i << " ";
     std::cout << std::endl;
 }
 
 int main() {
     initLookUpTables();
     zobrist::initZobristKeys();
-    Eval::initEvalTables();
+    NNUE::load();
 
     // generate input for neural network
     //saveNetInput(fenToInput(loadDataset(INT_MAX)));
@@ -54,9 +53,8 @@ int main() {
         board.print(WHITE);
 
         MoveList moves(board);
-        if (moves.size() == 0 || board.isDraw()) {
+        if (moves.size() == 0 || board.isDraw())
             break;
-        }
     }
 
     printMoves();

@@ -59,6 +59,9 @@ namespace Chess {
                     break;
             }
         }
+
+        // init accumulator
+        acc.init(board);
     }
 
     void Board::print(Color c) {

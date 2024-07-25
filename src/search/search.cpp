@@ -57,7 +57,7 @@ namespace Astra {
 
         Color stm = board.sideToMove();
         bool inCheck = board.inCheck();
-        int bestScore = Eval::evaluate(board);
+        int bestScore = Eval::getEval(board);
 
         // Alpha-Beta Pruning
         if (bestScore >= beta)
@@ -175,7 +175,7 @@ namespace Astra {
         if (inCheck)
             staticEval = -VALUE_NONE;
         else
-            staticEval = ttHit ? entry.score : Eval::evaluate(board);
+            staticEval = ttHit ? entry.score : Eval::getEval(board);
 
         // Internal Iterative Deepening
         if (depth >= 3 && !ttHit)

@@ -24,8 +24,8 @@
 
 using namespace Chess;
 
-const std::string DATA_PATH = "C:/Users/semio/Documents/Coding/Projects/Astra-Data/TrainingData/chessData.csv";
-const std::string NET_DATA_PATH = "C:/Users/semio/Downloads/data.bin";
+const std::string DATA_PATH = "C:/Users/semio/Documents/Coding/Projects/Astra-Data/TrainingData/chessData1.csv";
+const std::string NET_DATA_PATH = "C:/Users/semio/Downloads/chess_data1.bin";
 
 struct Dataset {
     std::string fen;
@@ -67,6 +67,11 @@ std::vector<Dataset> loadDataset(int dataSize) {
         std::getline(iss, fen, ',');
         std::getline(iss, eval, ',');
 
+        if(fen.empty()) {
+            std::cout << "Empty FEN at line " << i << std::endl;
+            exit(0);
+        }
+
         Dataset data{fen.substr(1), std::stof(eval)};
         dataset.push_back(data);
     }
@@ -91,7 +96,7 @@ std::vector<NetInput> fenToInput(const std::vector<Dataset> &_dataset) {
         }
 
         input.stm = board.sideToMove();
-        netInput.push_back(std::move(input));
+        netInput.push_back(input);
     }
 
     return netInput;

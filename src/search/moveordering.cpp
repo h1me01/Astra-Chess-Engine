@@ -75,7 +75,7 @@ namespace Astra {
     /*
      * Most Valuable Victim / Least Valuable Attacker
      */
-    constexpr int mvvlvaArray[7][7] = {
+    constexpr int mvvlvaTable[7][7] = {
             {205, 204, 203, 202, 201, 200, 0},
             {305, 304, 303, 302, 301, 300, 0},
             {405, 404, 403, 402, 401, 400, 0},
@@ -87,7 +87,7 @@ namespace Astra {
     int mvvlva(Board &board, Move &move) {
         int attacker = typeOfPiece(board.pieceAt(move.from()));
         int victim = typeOfPiece(board.pieceAt(move.to()));
-        return mvvlvaArray[victim][attacker];
+        return mvvlvaTable[victim][attacker];
     }
 
     /*
@@ -141,7 +141,8 @@ namespace Astra {
                 scores[moveCount] = TT_SCORE;
             } if (isCapture(move)) {
                 int seeScore = seeCapture(board, move);
-                scores[moveCount] = seeScore >= 0 ? CAPTURE_SCORE + mvvlva(board, move) : mvvlva(board, move);
+                int mvvlvaScore = mvvlva(board, move);
+                scores[moveCount] = seeScore >= 0 ? CAPTURE_SCORE + mvvlvaScore : mvvlvaScore;
             } else if (move == killer1[ply]) {
                 scores[moveCount] = KILLER_ONE_SCORE;
             } else if (move == killer2[ply]) {
@@ -159,7 +160,7 @@ namespace Astra {
 
         do {
             swapped = false;
-            for (int i = 0; i < n - 1; i++) {
+            for (int i = 0; i < n - 1; ++i) {
                 if (scores[i] < scores[i + 1]) {
                     int tempScore = scores[i];
                     scores[i] = scores[i + 1];
@@ -172,6 +173,7 @@ namespace Astra {
                     swapped = true;
                 }
             }
+
             n--;
         } while (swapped);
     }
