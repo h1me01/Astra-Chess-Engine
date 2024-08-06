@@ -19,17 +19,12 @@
 #ifndef ASTRA_CHESS_ENGINE_PESTO_H
 #define ASTRA_CHESS_ENGINE_PESTO_H
 
-#include "nnue.h"
-
 namespace Eval {
 
    inline int getEval(Board& board) {
-      NNUE::Accumulator acc = board.getAccumulator();
-      float prediction = NNUE::predict(acc);
-      return (prediction * 250 - 125) * 100;
+      return 0;
    }
 
 } // namespace Eval
-
 
 #endif //ASTRA_CHESS_ENGINE_PESTO_H

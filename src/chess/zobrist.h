@@ -25,15 +25,15 @@ namespace Chess {
 
     // psuedorandom number generator from stockfish
     class PRNG {
-        uint64_t s;
+        U64 s;
 
-        uint64_t rand64() {
+        U64 rand64() {
             s ^= s >> 12, s ^= s << 25, s ^= s >> 27;
             return s * 2685821657736338717LL;
         }
 
     public:
-        PRNG(uint64_t seed) : s(seed) {}
+        explicit PRNG(U64 seed) : s(seed) {}
 
         // generate psuedorandom number
         template<typename T>
@@ -49,21 +49,20 @@ namespace Chess {
     namespace zobrist {
         // zobrist keys for each piece and each square
         // used to incrementally update the hash key of a position
-        inline uint64_t zobristTable[NUM_PIECES][NUM_SQUARES];
+        inline U64 zobristTable[NUM_PIECES][NUM_SQUARES];
 
         // initializes the zobrist table with random 64-bit numbers
         inline void initZobristKeys() {
             PRNG rng(70026072);
 
-            for (int i = 0; i < NUM_PIECES; ++i) {
-                for (int j = 0; j < NUM_SQUARES; ++j) {
-                    zobristTable[i][j] = rng.rand<uint64_t>();
+            for (auto & i : zobristTable) {
+                for (U64 & j : i) {
+                    j = rng.rand<U64>();
                 }
             }
         }
     } // namespace zobrist
 
 } // namespace Chess
-
 
 #endif //ASTRA_ZOBRIST_H

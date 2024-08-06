@@ -89,7 +89,7 @@ namespace Chess {
         return nodes;
     }
 
-    void testPerft(int maxDepth) {
+    inline void testPerft(int maxDepth) {
         if (maxDepth < 1 || maxDepth > testCases.size()) {
             std::cerr << "Invalid depth for Perft!" << std::endl;
             return;
@@ -121,6 +121,5 @@ namespace Chess {
     }
 
 } // namespace Chess
-
 
 #endif //ASTRA_PERFT_H

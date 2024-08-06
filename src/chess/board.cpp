@@ -25,13 +25,14 @@ namespace Chess {
         history[0] = StateInfo();
 
         int square = a8;
-        for (char ch: fen.substr(0, fen.find(' '))) {
-            if (isdigit(ch))
+        for (const char ch: fen.substr(0, fen.find(' '))) {
+            if (isdigit(ch)) {
                 square += ch - '0';
-            else if (ch == '/')
+            } else if (ch == '/') {
                 square -= 16;
-            else
-                putPiece(Piece(PIECE_STR.find(ch)), Square(square++));
+            } else {
+                putPiece((Piece)PIECE_STR.find(ch), (Square)square++);
+            }
         }
 
         std::istringstream ss(fen.substr(fen.find(' ')));
@@ -59,9 +60,6 @@ namespace Chess {
                     break;
             }
         }
-
-        // init accumulator
-        acc.init(board);
     }
 
     void Board::print(Color c) {
@@ -69,11 +67,11 @@ namespace Chess {
 
         for (int r = RANK_8; r >= RANK_1; --r) {
             for (int f = FILE_A; f <= FILE_H; ++f) {
-                if (c == WHITE)
+                if (c == WHITE) {
                     s = r * 8 + f;
-                else
+                } else {
                     s = (7 - r) * 8 + f;
-
+                }
                 std::cout << PIECE_STR[board[s]] << " ";
             }
 
@@ -85,10 +83,9 @@ namespace Chess {
 
     std::string Board::fen() const {
         std::ostringstream fen;
-        int empty;
 
         for (int i = 56; i >= 0; i -= 8) {
-            empty = 0;
+            int empty = 0;
 
             for (int j = 0; j < 8; j++) {
                 Piece p = board[i + j];
@@ -106,12 +103,12 @@ namespace Chess {
         }
 
         fen << (stm == WHITE ? " w " : " b ")
-                << (history[gamePly].castleMask & WHITE_OO_MASK ? "" : "K")
-                << (history[gamePly].castleMask & WHITE_OOO_MASK ? "" : "Q")
-                << (history[gamePly].castleMask & BLACK_OO_MASK ? "" : "k")
-                << (history[gamePly].castleMask & BLACK_OOO_MASK ? "" : "q")
-                << (castleNotationHelper(fen) ? " " : "- ")
-                << (history[gamePly].epSquare == NO_SQUARE ? "-" : SQSTR[history[gamePly].epSquare]);
+            << (history[gamePly].castleMask & WHITE_OO_MASK ? "" : "K")
+            << (history[gamePly].castleMask & WHITE_OOO_MASK ? "" : "Q")
+            << (history[gamePly].castleMask & BLACK_OO_MASK ? "" : "k")
+            << (history[gamePly].castleMask & BLACK_OOO_MASK ? "" : "q")
+            << (castleNotationHelper(fen) ? " " : "- ")
+            << (history[gamePly].epSquare == NO_SQUARE ? "-" : SQSTR[history[gamePly].epSquare]);
 
         fen << " " << history[gamePly].halfMoveClock << " " << gamePly;
         return fen.str();
@@ -176,16 +173,18 @@ namespace Chess {
         history[gamePly].castleMask |= mask;
         history[gamePly].halfMoveClock++;
 
-        if (pt == PAWN || pcTo != NO_PIECE)
+        if (pt == PAWN || pcTo != NO_PIECE) {
             history[gamePly].halfMoveClock = 0;
+        }
 
         if (mf == QUIET || mf == DOUBLE_PUSH || mf == EN_PASSANT) {
             movePiece(from, to);
 
-            if (mf == DOUBLE_PUSH)
+            if (mf == DOUBLE_PUSH) {
                 history[gamePly].epSquare = Square(to ^ 8);
-            else if (mf == EN_PASSANT)
+            } else if (mf == EN_PASSANT) {
                 removePiece(Square(to ^ 8));
+            }
         } else if (mf == OO || mf == OOO) {
             Square rookFrom, rookTo;
 
@@ -210,8 +209,9 @@ namespace Chess {
             putPiece(makePiece(stm, typeOfPromotion(mf)), to);
         } else if (mf == CAPTURE) {
             history[gamePly].captured = pcTo;
-            hash ^= zobrist::zobristTable[pcFrom][from] ^ zobrist::zobristTable[pcFrom][to]
-                    ^ zobrist::zobristTable[pcTo][to];
+            hash ^= zobrist::zobristTable[pcFrom][from] ^
+                    zobrist::zobristTable[pcFrom][to] ^
+                    zobrist::zobristTable[pcTo][to];
             pieceBB[pcFrom] ^= mask;
             pieceBB[pcTo] &= ~mask;
             board[to] = pcFrom;
@@ -251,8 +251,9 @@ namespace Chess {
             removePiece(to);
             putPiece(makePiece(stm, PAWN), from);
 
-            if (mf >= PC_KNIGHT)
+            if (mf >= PC_KNIGHT) {
                 putPiece(history[gamePly].captured, to);
+            }
         } else if (mf == CAPTURE) {
             movePiece(to, from);
             putPiece(history[gamePly].captured, to);
@@ -286,11 +287,11 @@ namespace Chess {
     }
 
     bool Board::isInsufficientMat() const {
-        U64 pawns = pieceBB[WHITE_PAWN] | pieceBB[BLACK_PAWN];
-        U64 queens = pieceBB[WHITE_QUEEN] | pieceBB[BLACK_QUEEN];
-        U64 rooks = pieceBB[WHITE_ROOK] | pieceBB[BLACK_ROOK];
-        int numWhiteMinorPieces = popCount(pieceBB[WHITE_KNIGHT] | pieceBB[WHITE_BISHOP]);
-        int numBlackMinorPieces = popCount(pieceBB[BLACK_KNIGHT] | pieceBB[BLACK_BISHOP]);
+        const U64 pawns = pieceBB[WHITE_PAWN] | pieceBB[BLACK_PAWN];
+        const U64 queens = pieceBB[WHITE_QUEEN] | pieceBB[BLACK_QUEEN];
+        const U64 rooks = pieceBB[WHITE_ROOK] | pieceBB[BLACK_ROOK];
+        const int numWhiteMinorPieces = popCount(pieceBB[WHITE_KNIGHT] | pieceBB[WHITE_BISHOP]);
+        const int numBlackMinorPieces = popCount(pieceBB[BLACK_KNIGHT] | pieceBB[BLACK_BISHOP]);
         // draw when KvK, KvK+B, KvK+N, K+NvK+N, K+BvK+B
         return !pawns && !queens && !rooks && numWhiteMinorPieces <= 1 && numBlackMinorPieces <= 1;
     }

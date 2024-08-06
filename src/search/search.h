@@ -36,11 +36,11 @@ namespace Astra {
         Move findBestMove(unsigned int timePerMove = 1000);
 
     private:
-        static const int MAX_DEPTH = 64;
+        static constexpr int MAX_DEPTH = 64;
 
         U64 searchedNodes;
 
-        int timePerMove;
+        unsigned int timePerMove;
         int ply;
 
         Board board;
@@ -58,6 +58,5 @@ namespace Astra {
     };
 
 } // namespace Astra
-
 
 #endif //ASTRA_SEARCH_H

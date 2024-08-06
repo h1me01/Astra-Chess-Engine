@@ -144,7 +144,7 @@ namespace Chess {
 
     // returns the index of the least significant bit in the bitboard
     constexpr Square bsf(U64 b) {
-        return Square(DEBRUIJN64[0x03f79d71b4cb0a89 * (b ^ (b - 1)) >> 58]);
+        return (Square)DEBRUIJN64[0x03f79d71b4cb0a89 * (b ^ (b - 1)) >> 58];
     }
 
     // returns number of setFen bits in the bitboard
@@ -153,7 +153,7 @@ namespace Chess {
         b = (b & 0x3333333333333333) + ((b >> 2) & 0x3333333333333333);
         b = (b + (b >> 4)) & 0x0f0f0f0f0f0f0f0f;
         b = (b * 0x0101010101010101) >> 56;
-        return int(b);
+        return (int)b;
     }
 
     // returns number of set bits in the bitboard.
@@ -171,7 +171,7 @@ namespace Chess {
     inline Square popLsb(U64 &b) {
         int lsb = bsf(b);
         b &= b - 1;
-        return Square(lsb);
+        return (Square)lsb;
     }
 
     // reverses a bitboard
@@ -199,6 +199,5 @@ namespace Chess {
     }
 
 } // namespace Chess
-
 
 #endif //ASTRA_BITBOARD_H

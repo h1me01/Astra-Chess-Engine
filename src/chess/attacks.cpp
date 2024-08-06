@@ -22,8 +22,8 @@ namespace Chess {
 
     void initRookAttacks() {
         for (Square s = a1; s <= h8; ++s) {
-            U64 edges = (MASK_RANK[FILE_A] | MASK_RANK[FILE_H]) & ~MASK_RANK[squareRank(s)] |
-                        (MASK_FILE[FILE_A] | MASK_FILE[FILE_H]) & ~MASK_FILE[squareFile(s)];
+            const U64 edges = (MASK_RANK[FILE_A] | MASK_RANK[FILE_H]) & ~MASK_RANK[squareRank(s)] |
+                              (MASK_FILE[FILE_A] | MASK_FILE[FILE_H]) & ~MASK_FILE[squareFile(s)];
             ROOK_ATTACK_MASKS[s] = (MASK_RANK[squareRank(s)] ^ MASK_FILE[squareFile(s)]) & ~edges;
             ROOK_ATTACK_SHIFTS[s] = 64 - popCount(ROOK_ATTACK_MASKS[s]);
 
@@ -41,8 +41,8 @@ namespace Chess {
 
     void initBishopAttacks() {
         for (Square s = a1; s <= h8; ++s) {
-            U64 edges = (MASK_RANK[FILE_A] | MASK_RANK[FILE_H]) & ~MASK_RANK[squareRank(s)] |
-                        (MASK_FILE[FILE_A] | MASK_FILE[FILE_H]) & ~MASK_FILE[squareFile(s)];
+            const U64 edges = (MASK_RANK[FILE_A] | MASK_RANK[FILE_H]) & ~MASK_RANK[squareRank(s)] |
+                              (MASK_FILE[FILE_A] | MASK_FILE[FILE_H]) & ~MASK_FILE[squareFile(s)];
             BISHOP_ATTACK_MASKS[s] = (MASK_DIAGONAL[squareDiag(s)] ^ MASK_ANTI_DIAGONAL[squareAntiDiag(s)]) & ~edges;
             BISHOP_ATTACK_SHIFTS[s] = 64 - popCount(BISHOP_ATTACK_MASKS[s]);
 
@@ -53,7 +53,7 @@ namespace Chess {
                 index = index >> BISHOP_ATTACK_SHIFTS[s];
                 BISHOP_ATTACKS[s][index] = slidingAttacks(s, subset, MASK_DIAGONAL[squareDiag(s)]) |
                                            slidingAttacks(s, subset, MASK_ANTI_DIAGONAL[squareAntiDiag(s)]);
-                subset = subset - BISHOP_ATTACK_MASKS[s] & BISHOP_ATTACK_MASKS[s];
+                subset = (subset - BISHOP_ATTACK_MASKS[s]) & BISHOP_ATTACK_MASKS[s];
             } while (subset);
         }
     }
@@ -62,7 +62,7 @@ namespace Chess {
         initRookAttacks();
         initBishopAttacks();
 
-        // initialize pseudo legal getAttacks
+        // init pseudo legal getAttacks
         memcpy(PSEUDO_LEGAL_ATTACKS[KNIGHT], KNIGHT_ATTACKS, sizeof(KNIGHT_ATTACKS));
         memcpy(PSEUDO_LEGAL_ATTACKS[KING], KING_ATTACKS, sizeof(KING_ATTACKS));
 
@@ -72,10 +72,10 @@ namespace Chess {
             PSEUDO_LEGAL_ATTACKS[QUEEN][s] = PSEUDO_LEGAL_ATTACKS[ROOK][s] | PSEUDO_LEGAL_ATTACKS[BISHOP][s];
         }
 
-        // initialize squares between and line (defined in bitboard.h)
+        // init squares between and line (defined in bitboard.h)
         for (Square s1 = a1; s1 <= h8; ++s1) {
             for (Square s2 = a1; s2 <= h8; ++s2) {
-                U64 s = SQUARE_BB[s1] | SQUARE_BB[s2];
+                const U64 s = SQUARE_BB[s1] | SQUARE_BB[s2];
 
                 if (squareFile(s1) == squareFile(s2) || squareRank(s1) == squareRank(s2)) {
                     U64 b1 = getRookAttacks(s1, s);

@@ -130,17 +130,17 @@ namespace Chess {
         explicit Move(uint16_t m) { move = m; }
 
         Move(Square from, Square to) : move(0) {
-            move = (from << 6) | to;
+            move = from << 6 | to;
         }
 
         Move(Square from, Square to, MoveFlags flags) : move(0) {
-            move = (flags << 12) | (from << 6) | to;
+            move = flags << 12 | from << 6 | to;
         }
 
         explicit Move(const std::string& move) {
             Square from =  Square(Rank(move[1] - '1') << 3 | File(move[0] - 'a'));
             Square to =  Square(Rank(move[3] - '1') << 3 | File(move[2] - 'a'));
-            this->move = (from << 6) | to;
+            this->move = from << 6 | to;
         }
 
         Square to() const { return Square(move & 0x3f); }
@@ -160,6 +160,5 @@ namespace Chess {
     const Move NULL_MOVE = Move();
 
 } // namespace Chess
-
 
 #endif //ASTRA_TYPES_H

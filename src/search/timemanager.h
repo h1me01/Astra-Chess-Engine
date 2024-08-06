@@ -39,7 +39,7 @@ namespace Astra {
         }
 
         // set total time allowed for a game (in milliseconds)
-        void setTimePerMove(int milliseconds) {
+        void setTimePerMove(unsigned int milliseconds) {
             timePerMove = milliseconds;
         }
 
@@ -50,7 +50,7 @@ namespace Astra {
 
     private:
         TimePoint startTime;
-        int timePerMove{};
+        unsigned int timePerMove{};
 
         // get elapsed time since start (in milliseconds)
         int elapsedTime() const {
@@ -61,6 +61,5 @@ namespace Astra {
     };
 
 } // namespace Astra
-
 
 #endif //ASTRA_TIMEMANAGER_H

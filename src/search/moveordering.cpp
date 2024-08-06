@@ -85,8 +85,8 @@ namespace Astra {
     };
 
     int mvvlva(Board &board, Move &move) {
-        int attacker = typeOfPiece(board.pieceAt(move.from()));
-        int victim = typeOfPiece(board.pieceAt(move.to()));
+        const int attacker = typeOfPiece(board.pieceAt(move.from()));
+        const int victim = typeOfPiece(board.pieceAt(move.to()));
         return mvvlvaTable[victim][attacker];
     }
 
@@ -117,7 +117,7 @@ namespace Astra {
         history[board.sideToMove()][move.from()][move.to()] += score;
     }
 
-    int MoveOrdering::getHistoryScore(Board &board, Move &move) {
+    int MoveOrdering::getHistoryScore(Board &board, Move &move) const {
         return history[board.sideToMove()][move.from()][move.to()];
     }
 
@@ -140,8 +140,8 @@ namespace Astra {
             if (ttHit && move == entry.move) {
                 scores[moveCount] = TT_SCORE;
             } if (isCapture(move)) {
-                int seeScore = seeCapture(board, move);
-                int mvvlvaScore = mvvlva(board, move);
+                const int seeScore = seeCapture(board, move);
+                const int mvvlvaScore = mvvlva(board, move);
                 scores[moveCount] = seeScore >= 0 ? CAPTURE_SCORE + mvvlvaScore : mvvlvaScore;
             } else if (move == killer1[ply]) {
                 scores[moveCount] = KILLER_ONE_SCORE;

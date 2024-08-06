@@ -94,5 +94,4 @@ namespace Astra {
 
 } // namespace Astra
 
-
 #endif //ASTRACHESS_PVTABLE_H

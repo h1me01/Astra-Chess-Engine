@@ -119,5 +119,4 @@ void saveNetInput(const std::vector<NetInput>& data) {
     exit(0);
 }
 
-
 #endif //ASTRA_GENDATA_H

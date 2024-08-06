@@ -55,7 +55,7 @@ namespace Astra {
 
         void clear();
 
-        int getHistoryScore(Board &board, Move &move);
+        int getHistoryScore(Board &board, Move &move) const;
 
         void updateHistory(Board &board, Move &move, int score);
         void updateKiller(Move &move, int ply);
@@ -70,6 +70,5 @@ namespace Astra {
     };
 
 } // namespace Astra
-
 
 #endif //ASTRA_MOVEORDERING_H

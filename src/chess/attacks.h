@@ -113,19 +113,19 @@ namespace Chess {
     // calculates sliding getAttacks from a given square, on a given axis
     // this uses the Hyperbola Quintessence Algorithm
     inline U64 slidingAttacks(Square s, U64 occ, U64 mask) {
-        U64 maskOcc = mask & occ;
+        const U64 maskOcc = mask & occ;
         return (maskOcc - SQUARE_BB[s] * 2 ^ reverse(reverse(maskOcc) - reverse(SQUARE_BB[s]) * 2)) & mask;
     }
 
     inline U64 getRookAttacks(Square s, U64 occ) {
-        U64 maskedOcc = occ & ROOK_ATTACK_MASKS[s];
-        U64 index = maskedOcc * ROOK_MAGICS[s] >> ROOK_ATTACK_SHIFTS[s];
+        const U64 maskedOcc = occ & ROOK_ATTACK_MASKS[s];
+        const U64 index = maskedOcc * ROOK_MAGICS[s] >> ROOK_ATTACK_SHIFTS[s];
         return ROOK_ATTACKS[s][index];
     }
 
     inline U64 getBishopAttacks(Square s, U64 occ) {
-        U64 maskedOcc = occ & BISHOP_ATTACK_MASKS[s];
-        U64 index = (maskedOcc * BISHOP_MAGICS[s]) >> BISHOP_ATTACK_SHIFTS[s];
+        const U64 maskedOcc = occ & BISHOP_ATTACK_MASKS[s];
+        const U64 index = maskedOcc * BISHOP_MAGICS[s] >> BISHOP_ATTACK_SHIFTS[s];
         return BISHOP_ATTACKS[s][index];
     }
 
@@ -156,6 +156,5 @@ namespace Chess {
     }
 
 } // namespace Chess
-
 
 #endif //ASTRA_ATTACKS_H

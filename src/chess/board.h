@@ -21,7 +21,6 @@
 
 #include "zobrist.h"
 #include "attacks.h"
-#include "../eval/accumulator.h"
 
 namespace Chess {
 
@@ -57,7 +56,7 @@ namespace Chess {
         // contains all the possible squares that are not a capture
         U64 quietMask;
 
-        Board(const std::string &fen);
+        explicit Board(const std::string &fen);
 
         void print(Color c);
 
@@ -68,8 +67,6 @@ namespace Chess {
         int ply() const { return gamePly; }
         U64 getHash() const { return hash; }
         Square kingSquare(Color c) const {return bsf(pieceBitboard(c, KING)); }
-
-        NNUE::Accumulator getAccumulator() { return acc; };
 
         U64 occupancy(Color c) const;
         U64 isAttacked(Color c, Square s, U64 occ) const;
@@ -96,7 +93,6 @@ namespace Chess {
         Color stm;
         int gamePly;
         U64 hash;
-        NNUE::Accumulator acc;
 
         void putPiece(Piece pc, Square s);
         void removePiece(Square s);
@@ -104,6 +100,5 @@ namespace Chess {
     };
 
 } // namespace Chess
-
 
 #endif //ASTRA_BOARD_H

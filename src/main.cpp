@@ -24,15 +24,15 @@ const std::string pieceNot[] = {"P", "N", "B", "R", "Q", "K", ""};
 std::vector<std::string> moveAccumulator;
 
 void printMoves() {
-    for (const auto & i : moveAccumulator)
+    for (const auto & i : moveAccumulator) {
         std::cerr << i << " ";
+    }
     std::cout << std::endl;
 }
 
 int main() {
     initLookUpTables();
     zobrist::initZobristKeys();
-    NNUE::load();
 
     // generate input for neural network
     //saveNetInput(fenToInput(loadDataset(INT_MAX)));
@@ -53,8 +53,9 @@ int main() {
         board.print(WHITE);
 
         MoveList moves(board);
-        if (moves.size() == 0 || board.isDraw())
+        if (moves.size() == 0 || board.isDraw()) {
             break;
+        }
     }
 
     printMoves();

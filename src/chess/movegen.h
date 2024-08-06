@@ -55,8 +55,8 @@ namespace Chess {
     template<Color Us, Direction d, MoveFlags mf>
     Move *makePromotions(Move *&moves, U64 to) {
         while (to) {
-            Square s = popLsb(to);
-            Square from = s - relativeDir(Us, d);
+            const Square s = popLsb(to);
+            const Square from = s - relativeDir(Us, d);
             *moves++ = Move(from, s, mf);
             *moves++ = Move(from, s, MoveFlags(mf + 1));
             *moves++ = Move(from, s, MoveFlags(mf + 2));
@@ -84,7 +84,7 @@ namespace Chess {
         // enemy knights attacks
         U64 theirKnights = board.pieceBitboard(them, KNIGHT);
         while (theirKnights) {
-            Square s = popLsb(theirKnights);
+            const Square s = popLsb(theirKnights);
             danger |= getAttacks(KNIGHT, s, occ);
         }
 
@@ -94,14 +94,14 @@ namespace Chess {
         // enemy bishop and queen attacks
         U64 theirDiagSliders = board.diagSliders(them);
         while (theirDiagSliders) {
-            Square s = popLsb(theirDiagSliders);
+            const Square s = popLsb(theirDiagSliders);
             danger |= getAttacks(BISHOP, s, occ);
         }
 
         // enemy rook and queen attacks
         U64 theirOrthSliders = board.orthSliders(them);
         while (theirOrthSliders) {
-            Square s = popLsb(theirOrthSliders);
+            const Square s = popLsb(theirOrthSliders);
             danger |= getAttacks(ROOK, s, occ);
         }
 
@@ -120,9 +120,8 @@ namespace Chess {
         checkers |= getAttacks(KNIGHT, kingSq, ourOcc | theirOcc) & board.pieceBitboard(them, KNIGHT);
 
         // potential enemy bishop, rook and queen attacks at our king
-        U64 candidates =
-                getAttacks(ROOK, kingSq, theirOcc) & board.orthSliders(them)
-                | getAttacks(BISHOP, kingSq, theirOcc) & board.diagSliders(them);
+        U64 candidates = getAttacks(ROOK, kingSq, theirOcc) & board.orthSliders(them)
+                       | getAttacks(BISHOP, kingSq, theirOcc) & board.diagSliders(them);
 
         pinned = 0;
         while (candidates) {
@@ -151,15 +150,17 @@ namespace Chess {
         // checks if king and the h-rook have moved
         U64 isAllowed = castleMask & shortCastlingMask(Us);
 
-        if (!(possibleChecks | isAllowed))
+        if (!(possibleChecks | isAllowed)) {
             *moves++ = Us == WHITE ? Move(e1, g1, OO) : Move(e8, g8, OO);
+        }
 
         // ignoreLongCastlingDanger is used to get rid of the danger on the possibleChecks or b8 square
         possibleChecks = (occ | board.danger & ~ignoreLongCastlingDanger(Us)) & longCastlingBlockersMask(Us);
         isAllowed = castleMask & longCastlingMask(Us);
 
-        if (!(possibleChecks | isAllowed))
+        if (!(possibleChecks | isAllowed)) {
             *moves++ = Us == WHITE ? Move(e1, c1, OOO) : Move(e8, c8, OOO);
+        }
 
         return moves;
     }
@@ -229,7 +230,7 @@ namespace Chess {
         // used to store square
         Square s;
 
-        // pinned pawns cannot move if king is in check
+        // check if moving pinned pawns releases a check
         if (checkersCount == 0) {
             // for each pinned pawn
             U64 pinnedPawns = board.pinned & board.pieceBitboard(Us, PAWN);
@@ -240,20 +241,20 @@ namespace Chess {
                     U64 attacks = pawnAttacks(Us, s) & board.captureMask & LINE[ourKingSq][s];
                     // quiet promotions are impossible since it would leave the king in check
                     while (attacks) {
-                        Square to = popLsb(attacks);
+                        const Square to = popLsb(attacks);
                         *moves++ = Move(s, to, PC_KNIGHT);
                         *moves++ = Move(s, to, PC_BISHOP);
                         *moves++ = Move(s, to, PC_ROOK);
                         *moves++ = Move(s, to, PC_QUEEN);
                     }
                 } else {
-                    U64 attacks = pawnAttacks(Us, s) & board.captureMask & LINE[s][ourKingSq];
+                    const U64 attacks = pawnAttacks(Us, s) & board.captureMask & LINE[s][ourKingSq];
                     moves = make<CAPTURE>(moves, s, attacks);
 
-                    U64 singlePush = shift(relativeDir(Us, NORTH), SQUARE_BB[s]) & ~occ & LINE[ourKingSq][s];
+                    const U64 singlePush = shift(relativeDir(Us, NORTH), SQUARE_BB[s]) & ~occ & LINE[ourKingSq][s];
                     moves = make<QUIET>(moves, s, singlePush);
 
-                    U64 doublePush = shift(relativeDir(Us, NORTH), singlePush & MASK_RANK[relativeRank(Us, RANK_3)]);
+                    const U64 doublePush = shift(relativeDir(Us, NORTH), singlePush & MASK_RANK[relativeRank(Us, RANK_3)]);
                     moves = make<DOUBLE_PUSH>(moves, s, doublePush & ~occ & LINE[ourKingSq][s]);
                 }
             }
@@ -262,13 +263,13 @@ namespace Chess {
             if (epSq != NO_SQUARE) {
                 const U64 theirOrthSliders = board.orthSliders(them);
 
-                U64 epCaptureBB = pawnAttacks(them, epSq) & board.pieceBitboard(Us, PAWN);
+                const U64 epCaptureBB = pawnAttacks(them, epSq) & board.pieceBitboard(Us, PAWN);
                 U64 canCapture = epCaptureBB & ~board.pinned;
 
                 while (canCapture) {
                     s = popLsb(canCapture);
                     // pseudo-pinned e.p. case
-                    U64 newOccMask = occ ^ SQUARE_BB[s] ^ shift(relativeDir(Us, SOUTH), SQUARE_BB[epSq]);
+                    const U64 newOccMask = occ ^ SQUARE_BB[s] ^ shift(relativeDir(Us, SOUTH), SQUARE_BB[epSq]);
                     U64 attacker = slidingAttacks(ourKingSq, newOccMask, MASK_RANK[squareRank(ourKingSq)]);
 
                     if ((attacker & theirOrthSliders) == 0)
@@ -277,8 +278,9 @@ namespace Chess {
 
                 // pinned pawns can only capture e.p. if they are pinned diagonally and the e.p. square is in line with the king
                 canCapture = epCaptureBB & board.pinned & LINE[epSq][ourKingSq];
-                if (canCapture)
+                if (canCapture) {
                     *moves++ = Move(bsf(canCapture), epSq, EN_PASSANT);
+                }
             }
         }
 
@@ -346,20 +348,21 @@ namespace Chess {
         board.checkers = checkerMask<Us>(board, ourKingSq, board.pinned);
 
         // generate king moves
-        U64 attacks = getAttacks(KING, ourKingSq, occ) & ~(ourOcc | board.danger);
+        const U64 attacks = getAttacks(KING, ourKingSq, occ) & ~(ourOcc | board.danger);
 
         moves = make<CAPTURE>(moves, ourKingSq, attacks & theirOcc);
         moves = make<QUIET>(moves, ourKingSq, attacks & ~theirOcc);
 
         // if double check, then only king moves are legal
-        int checkersCount = sparsePopCount(board.checkers);
-        if (checkersCount == 2)
+        const int checkersCount = sparsePopCount(board.checkers);
+        if (checkersCount == 2) {
             return moves;
+        }
 
         // single check
         if (checkersCount == 1) {
-            Square checkerSquare = bsf(board.checkers);
-            Piece checkerPiece = board.pieceAt(checkerSquare);
+            const Square checkerSquare = bsf(board.checkers);
+            const Piece checkerPiece = board.pieceAt(checkerSquare);
 
             // holds our pieces that can capture the checking piece
             U64 canCapture;
@@ -370,17 +373,18 @@ namespace Chess {
                     const U64 ourPawns = board.pieceBitboard(Us, PAWN);
 
                     canCapture = pawnAttacks(them, epSq) & ourPawns & ~board.pinned;
-                    while (canCapture)
+                    while (canCapture) {
                         *moves++ = Move(popLsb(canCapture), epSq, EN_PASSANT);
+                    }
                 }
             }
 
             // if checker is either a pawn or a knight, the only legal moves are to capture it
             if (checkerPiece == makePiece(them, KNIGHT)) {
                 canCapture = board.isAttacked(Us, checkerSquare, occ) & ~board.pinned;
-                while (canCapture)
+                while (canCapture) {
                     *moves++ = Move(popLsb(canCapture), checkerSquare, CAPTURE);
-
+                }
                 return moves;
             }
 
@@ -408,10 +412,11 @@ namespace Chess {
         explicit MoveList(Board &board) {
             Color stm = board.sideToMove();
 
-            if (stm == WHITE)
+            if (stm == WHITE) {
                 last = genLegalMoves<WHITE>(board, list);
-            else
+            } else {
                 last = genLegalMoves<BLACK>(board, list);
+            }
         }
 
         constexpr Move &operator[](int i) { return list[i]; }
@@ -426,6 +431,5 @@ namespace Chess {
     };
 
 } // namespace Chess
-
 
 #endif //ASTRA_MOVEGEN_H

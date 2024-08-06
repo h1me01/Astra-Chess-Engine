@@ -63,5 +63,4 @@ namespace Astra {
 
 } // namespace Astra
 
-
 #endif //ASTRA_TT_H

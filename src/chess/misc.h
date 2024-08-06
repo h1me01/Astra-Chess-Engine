@@ -30,17 +30,15 @@ namespace Chess {
                 U64 mask = 1ULL << square;
                 std::cout << ((b & mask) ? "1 " : "0 ");
             }
-
             std::cout << std::endl;
         }
-
         std::cout << std::endl;
     }
 
     // helper to represent the castleHelper rights in the fen notation
-    inline bool castleNotationHelper(std::ostringstream &fenStream) {
-        std::string fen = fenStream.str();
-        std::string rights = fen.substr(fen.find(' ') + 1);
+    inline bool castleNotationHelper(const std::ostringstream &fenStream) {
+        const std::string fen = fenStream.str();
+        const std::string rights = fen.substr(fen.find(' ') + 1);
         return rights.find_first_of("kqKQ") != std::string::npos;
     }
 
@@ -66,11 +64,11 @@ namespace Chess {
 
     // prints the move
     inline std::ostream &operator<<(std::ostream &os, const Move &m) {
-        if (SQSTR[m.from()] == "a1" && SQSTR[m.to()] == "a1")
+        if (SQSTR[m.from()] == "a1" && SQSTR[m.to()] == "a1") {
             os << "NULL MOVE";
-        else
+        } else {
             os << SQSTR[m.from()] << SQSTR[m.to()];
-
+        }
         return os;
     }
 
@@ -102,17 +100,17 @@ namespace Chess {
 
     // increases the square by one
     inline Square &operator++(Square &s) {
-        return s = Square(int(s) + 1);
+        return s = Square((int)s + 1);
     }
 
     // adds squares
     constexpr Square operator+(Square s, Direction d) {
-        return Square(int(s) + int(d));
+        return Square((int)s + (int)d);
     }
 
     // subtracts squares
     constexpr Square operator-(Square s, Direction d) {
-        return Square(int(s) - int(d));
+        return Square((int)s - (int)d);
     }
 
     // adds squares
@@ -154,7 +152,7 @@ namespace Chess {
     constexpr Square relativeSquare(Color c, Square s) {
         return c == WHITE ? s : Square(s ^ 56);
     }
-} //namespace Chess
 
+} //namespace Chess
 
 #endif //ASTRA_MISC_H
